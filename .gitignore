@@ -1,0 +1,25 @@
+# Eclipse workspace metadata
+.metadata/
+*.lock
+
+# Compiled output
+bin/
+build/
+out/
+target/
+*.class
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# IDE local settings (mantener .project y .classpath, ignorar caches locales)
+.recommenders/
+
+# Java
+*.jar
+*.war
+*.ear
+hs_err_pid*
