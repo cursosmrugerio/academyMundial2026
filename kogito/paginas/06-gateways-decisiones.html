@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tema 06 · Gateways: bifurcar y unir el flujo — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="05-variables-datos.html" class="oculta-movil">← Anterior</a>
+    <a href="07-tareas-humanas.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Tema 06</span>
+    <h1>Gateways: bifurcar y unir el flujo</h1>
+    <p class="bajada">Un proceso casi nunca es una línea recta. Aquí aprenderás a tomar decisiones, lanzar caminos en paralelo y volverlos a juntar — sin escribir un solo <code class="en-linea">if</code> a mano ni tocar un <code class="en-linea">Thread</code>.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <section class="seccion">
+      <h2>¿Qué es un gateway?</h2>
+      <p>Hasta ahora tu proceso ha sido una secuencia: empieza, ejecuta una tarea, ejecuta otra y termina. Pero la vida real tiene <strong>condiciones</strong> (si el monto supera cierto límite, pídelo a un humano) y tiene <strong>concurrencia</strong> (mientras consultas al buró de crédito, validas la identidad). El elemento de BPMN que gobierna esos cruces de caminos es el <strong>gateway</strong> (compuerta o pasarela).</p>
+
+      <p>Un gateway es un <strong>punto de control del flujo</strong>: ahí el camino se <strong>bifurca</strong> (un flujo entra y salen varios) o se <strong>vuelve a unir</strong> (varios flujos entran y sale uno). Por sí mismo no ejecuta lógica de negocio ni invoca servicios; solo decide <em>por dónde</em> y <em>cuántos</em> caminos continúan. Se dibuja siempre como un <strong>rombo</strong>, y una marca interior (X, +, O…) indica de qué tipo es.</p>
+
+      <div class="chips">
+        <span class="chip bpmn-gateway">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M12 2 L22 12 L12 22 L2 12 Z" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></path></svg>
+          Gateway = rombo
+        </span>
+        <span class="chip bpmn-evento">
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#eefaf2" stroke="#1f9d55" stroke-width="2"></circle></svg>
+          Evento = círculo
+        </span>
+        <span class="chip bpmn-tarea">
+          <svg class="ico" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="3" fill="#eef3f9" stroke="#004481" stroke-width="2"></rect></svg>
+          Tarea = rectángulo redondeado
+        </span>
+        <span class="chip bpmn-flujo">
+          <svg class="ico" viewBox="0 0 24 24"><line x1="3" y1="12" x2="18" y2="12" stroke="#495567" stroke-width="2"></line><path d="M16,8 L22,12 L16,16 Z" fill="#495567"></path></svg>
+          Flujo de secuencia = flecha
+        </span>
+      </div>
+
+      <div class="puente">
+        <p>Piénsalo como el <strong>plano de control</strong> de tu lógica. En tu servicio de Spring decides el camino con <code class="en-linea">if</code>/<code class="en-linea">else</code> y, cuando quieres concurrencia, lanzas un <code class="en-linea">CompletableFuture</code> o un <code class="en-linea">ExecutorService</code>. Los gateways son exactamente eso, pero <strong>declarados en el diagrama</strong>: el motor de Kogito los interpreta y orquesta por ti. Tu código solo aporta los datos sobre los que se decide.</p>
+      </div>
+
+      <div class="aviso"><div class="titulo">ℹ️ Nota</div><p>Un gateway puede actuar como <strong>divergente</strong> (split: un flujo entra, varios salen) o <strong>convergente</strong> (join: varios entran, uno sale). El mismo tipo de rombo se usa para ambos roles; lo determina cuántas flechas lleguen y cuántas partan.</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>Los tres tipos que usarás todo el tiempo</h2>
+      <p>BPMN define varios gateways, pero el 95% de tus procesos se resuelve con tres. Vamos uno por uno, cada uno con su marca, su diagrama y su equivalente en código que ya conoces.</p>
+
+      <h3>1) Gateway exclusivo (XOR · marca <strong>X</strong>)</h3>
+      <p>Toma <strong>un solo camino</strong>. Evalúa las condiciones de sus flujos de salida en orden y se va por la <strong>primera que sea verdadera</strong>; el resto se ignora aunque también fueran verdaderas. Es, literalmente, tu cadena <code class="en-linea">if</code> / <code class="en-linea">else if</code> / <code class="en-linea">else</code>.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 620 220" role="img" aria-label="Gateway exclusivo: un flujo entra al rombo con marca equis y sale por una sola de tres ramas según la condición">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+          <!-- entrada -->
+          <rect x="20" y="88" width="120" height="44" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="80" y="115" text-anchor="middle" class="svg-texto-b">Evaluar</text>
+          <!-- rombo XOR -->
+          <path d="M250 110 L290 75 L330 110 L290 145 Z" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></path>
+          <line x1="278" y1="98" x2="302" y2="122" stroke="#b87900" stroke-width="2.5"></line>
+          <line x1="302" y1="98" x2="278" y2="122" stroke="#b87900" stroke-width="2.5"></line>
+          <!-- ramas -->
+          <rect x="450" y="20" width="150" height="40" rx="10" class="svg-borde" fill="#e3f7ec" stroke="#1f9d55"></rect>
+          <text x="525" y="45" text-anchor="middle" class="svg-texto-b">Camino A</text>
+          <rect x="450" y="90" width="150" height="40" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="525" y="115" text-anchor="middle" class="svg-texto-b">Camino B</text>
+          <rect x="450" y="160" width="150" height="40" rx="10" class="svg-borde" fill="#fde6e6" stroke="#d64545"></rect>
+          <text x="525" y="185" text-anchor="middle" class="svg-texto-b">Por defecto</text>
+          <!-- flechas -->
+          <line x1="140" y1="110" x2="248" y2="110" class="svg-flecha"></line>
+          <path d="M325 95 C 390 60, 410 40, 448 40" class="svg-flecha"></path>
+          <line x1="330" y1="110" x2="448" y2="110" class="svg-flecha"></line>
+          <path d="M325 125 C 390 160, 410 180, 448 180" class="svg-flecha"></path>
+          <text x="392" y="40" class="svg-texto">monto &lt; 50000</text>
+          <text x="360" y="103" class="svg-texto">50000–200000</text>
+          <text x="392" y="200" class="svg-texto">else</text>
+        </svg>
+        <figcaption>Gateway exclusivo: entra un flujo y sale por <strong>una sola</strong> rama. La rama «por defecto» (sin condición) recoge todo lo que no cumplió las anteriores.</figcaption>
+      </figure>
+
+      <h3>2) Gateway paralelo (AND · marca <strong>+</strong>)</h3>
+      <p>Activa <strong>todas</strong> las ramas a la vez. No evalúa condiciones: cuando diverge (<em>fork</em>), lanza cada camino simultáneamente; cuando converge (<em>join</em>), <strong>espera a que todas</strong> las ramas entrantes lleguen antes de continuar. Es tu «lanza tres tareas en paralelo y reúnelas todas al final».</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 660 220" role="img" aria-label="Gateway paralelo: un fork lanza tres ramas a la vez y un join espera a que las tres terminen antes de seguir">
+          <defs>
+            <marker id="flecha2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+          <!-- inicio -->
+          <circle cx="38" cy="110" r="20" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></circle>
+          <!-- rombo fork -->
+          <path d="M120 110 L156 78 L192 110 L156 142 Z" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></path>
+          <line x1="156" y1="90" x2="156" y2="130" stroke="#b87900" stroke-width="2.5"></line>
+          <line x1="136" y1="110" x2="176" y2="110" stroke="#b87900" stroke-width="2.5"></line>
+          <text x="156" y="166" text-anchor="middle" class="svg-texto">fork</text>
+          <!-- ramas paralelas -->
+          <rect x="270" y="25" width="140" height="38" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="340" y="49" text-anchor="middle" class="svg-texto-b">Validar buró</text>
+          <rect x="270" y="91" width="140" height="38" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="340" y="115" text-anchor="middle" class="svg-texto-b">Validar identidad</text>
+          <rect x="270" y="157" width="140" height="38" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="340" y="181" text-anchor="middle" class="svg-texto-b">Consultar ingresos</text>
+          <!-- rombo join -->
+          <path d="M490 110 L526 78 L562 110 L526 142 Z" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></path>
+          <line x1="526" y1="90" x2="526" y2="130" stroke="#b87900" stroke-width="2.5"></line>
+          <line x1="506" y1="110" x2="546" y2="110" stroke="#b87900" stroke-width="2.5"></line>
+          <text x="526" y="166" text-anchor="middle" class="svg-texto">join (espera)</text>
+          <!-- fin -->
+          <circle cx="630" cy="110" r="20" class="svg-borde" fill="#fde6e6" stroke="#d64545" stroke-width="3"></circle>
+          <!-- flechas -->
+          <line x1="58" y1="110" x2="118" y2="110" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha2)"></line>
+          <path d="M188 98 C 230 60, 240 44, 268 44" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha2)"></path>
+          <line x1="192" y1="110" x2="268" y2="110" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha2)"></line>
+          <path d="M188 122 C 230 160, 240 176, 268 176" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha2)"></path>
+          <path d="M410 44 C 452 60, 462 76, 490 98" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha2)"></path>
+          <line x1="410" y1="110" x2="488" y2="110" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha2)"></line>
+          <path d="M410 176 C 452 160, 462 144, 490 122" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha2)"></path>
+          <line x1="562" y1="110" x2="608" y2="110" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha2)"></line>
+        </svg>
+        <figcaption>Gateway paralelo: el <em>fork</em> lanza las tres validaciones a la vez y el <em>join</em> no deja avanzar hasta que <strong>las tres</strong> han terminado.</figcaption>
+      </figure>
+
+      <h3>3) Gateway inclusivo (OR · marca <strong>O</strong>)</h3>
+      <p>Es el punto medio: evalúa las condiciones de salida y activa <strong>todas las que sean verdaderas</strong> — pueden ser una, varias o todas. Cuando converge, espera únicamente a las ramas que <em>realmente se activaron</em>. Útil cuando varios caminos no son mutuamente excluyentes (un cliente puede requerir aviso por correo <em>y</em> por SMS, o solo uno, o ninguno).</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 640 200" role="img" aria-label="Gateway inclusivo: un rombo con marca de círculo activa una o varias ramas según cuáles condiciones se cumplan">
+          <defs>
+            <marker id="flecha3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+          <rect x="20" y="78" width="120" height="44" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="80" y="105" text-anchor="middle" class="svg-texto-b">Notificar</text>
+          <!-- rombo OR -->
+          <path d="M240 100 L278 65 L316 100 L278 135 Z" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></path>
+          <circle cx="278" cy="100" r="13" fill="none" stroke="#b87900" stroke-width="2.5"></circle>
+          <!-- ramas -->
+          <rect x="430" y="18" width="180" height="38" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="520" y="42" text-anchor="middle" class="svg-texto-b">Enviar correo</text>
+          <rect x="430" y="80" width="180" height="38" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="520" y="104" text-anchor="middle" class="svg-texto-b">Enviar SMS</text>
+          <rect x="430" y="142" width="180" height="38" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="520" y="166" text-anchor="middle" class="svg-texto-b">Notificación push</text>
+          <!-- flechas -->
+          <line x1="140" y1="100" x2="238" y2="100" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha3)"></line>
+          <path d="M311 86 C 360 55, 380 37, 428 37" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha3)"></path>
+          <line x1="316" y1="100" x2="428" y2="100" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha3)"></line>
+          <path d="M311 114 C 360 145, 380 163, 428 163" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha3)"></path>
+          <text x="350" y="33" class="svg-texto">quiereCorreo</text>
+          <text x="360" y="93" class="svg-texto">quiereSms</text>
+          <text x="350" y="183" class="svg-texto">quierePush</text>
+        </svg>
+        <figcaption>Gateway inclusivo: se activan <strong>todas las ramas cuya condición sea verdadera</strong>. Si el cliente quiere correo y push pero no SMS, solo se disparan esas dos.</figcaption>
+      </figure>
+
+      <div class="aviso tip"><div class="titulo">✅ Tip</div><p>Regla mental rápida: <strong>X = uno</strong>, <strong>+ = todos</strong>, <strong>O = los que cumplan</strong>. Si dudas entre exclusivo e inclusivo, pregúntate: «¿los caminos se excluyen entre sí?». Si sí, usa exclusivo (XOR). Si pueden coexistir, inclusivo (OR).</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>Condiciones en los flujos de salida</h2>
+      <p>En los gateways <strong>exclusivo</strong> e <strong>inclusivo</strong>, lo que decide hacia dónde va el flujo no es el rombo, sino las <strong>condiciones que escribes en cada flecha de salida</strong>. Esas condiciones son expresiones booleanas sobre las <strong>variables del proceso</strong> (las que viste en el tema anterior). El paralelo no usa condiciones: siempre dispara todo.</p>
+
+      <p>En Kogito el dialecto más común para estas condiciones es <strong>Java</strong>. Una condición es una expresión que devuelve <code class="en-linea">true</code> o <code class="en-linea">false</code> usando las variables del proceso por su nombre:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">Condiciones de los flujos (dialecto Java)</span></div>
+        <pre><code><span class="cmt">// Flujo hacia "APROBADO": las variables del proceso se usan por su nombre</span>
+score &gt;= <span class="str">700</span> &amp;&amp; monto &lt;= <span class="str">200000</span>
+
+<span class="cmt">// Flujo hacia "REVISION"</span>
+score &gt;= <span class="str">600</span> &amp;&amp; score &lt; <span class="str">700</span>
+
+<span class="cmt">// Flujo "por defecto": sin expresión. Es tu rama else.</span></code></pre>
+      </div>
+
+      <p>Internamente, el editor de procesos guarda estas condiciones en el archivo <code class="en-linea">.bpmn</code> como expresiones formales. Si abres el XML verás algo así para cada flujo condicionado:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">credito.bpmn</span></div>
+        <pre><code><span class="kw">&lt;sequenceFlow</span> <span class="typ">id</span>=<span class="str">"flujoAprobado"</span> <span class="typ">sourceRef</span>=<span class="str">"gwDecision"</span> <span class="typ">targetRef</span>=<span class="str">"tareaAprobar"</span><span class="kw">&gt;</span>
+  <span class="kw">&lt;conditionExpression</span> <span class="typ">xsi:type</span>=<span class="str">"tFormalExpression"</span>
+                       <span class="typ">language</span>=<span class="str">"http://www.java.com/java"</span><span class="kw">&gt;</span>
+    score &gt;= 700 &amp;&amp; monto &lt;= 200000
+  <span class="kw">&lt;/conditionExpression&gt;</span>
+<span class="kw">&lt;/sequenceFlow&gt;</span></code></pre>
+      </div>
+
+      <div class="puente">
+        <p>Lo importante: <strong>tú no escribes este XML a mano</strong>, igual que en Spring no escribes el bytecode. Lo dibujas en el editor de procesos y tecleas la condición en la propiedad del flujo. Y, como en Spring, el <strong>endpoint REST que dispara el proceso se autogenera</strong>: no hay un <code class="en-linea">@RestController</code> que mantengas tú. Mandas un <code class="en-linea">POST</code> con el JSON de entrada y Kogito instancia el proceso y deja que los gateways hagan su trabajo.</p>
+      </div>
+
+      <div class="aviso"><div class="titulo">ℹ️ Nota</div><p>En el gateway exclusivo el <strong>orden de evaluación importa</strong>: gana la primera condición verdadera. Por eso conviene ordenar de la más específica a la más general y dejar siempre una rama «por defecto» al final, tal como pondrías el <code class="en-linea">else</code> al cierre de tu cadena de <code class="en-linea">if</code>.</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>El ejemplo del crédito, paso a paso</h2>
+      <p>Retomemos el proceso de solicitud de crédito. Tras calcular un <code class="en-linea">score</code> y comparar el <code class="en-linea">monto</code>, una tarea de reglas deja en la variable <code class="en-linea">decision</code> uno de tres valores: <span class="pildora verde">APROBADO</span> <span class="pildora ambar">REVISION</span> <span class="pildora rojo">RECHAZADO</span>. Un <strong>gateway exclusivo</strong> ramifica el flujo según ese valor.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 680 260" role="img" aria-label="Proceso de crédito: una tarea calcula la decisión, un gateway exclusivo ramifica en aprobado, revisión o rechazado, y cada rama termina en su propio fin">
+          <defs>
+            <marker id="flecha4" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+          <!-- inicio -->
+          <circle cx="36" cy="130" r="20" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></circle>
+          <text x="36" y="172" text-anchor="middle" class="svg-texto">Solicitud</text>
+          <!-- tarea de reglas -->
+          <rect x="92" y="106" width="150" height="48" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="167" y="127" text-anchor="middle" class="svg-texto-b">Evaluar crédito</text>
+          <text x="167" y="145" text-anchor="middle" class="svg-texto">(reglas)</text>
+          <!-- rombo XOR -->
+          <path d="M310 130 L348 95 L386 130 L348 165 Z" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></path>
+          <line x1="335" y1="117" x2="361" y2="143" stroke="#b87900" stroke-width="2.5"></line>
+          <line x1="361" y1="117" x2="335" y2="143" stroke="#b87900" stroke-width="2.5"></line>
+          <text x="348" y="186" text-anchor="middle" class="svg-texto">decision?</text>
+          <!-- rama aprobado -->
+          <rect x="470" y="20" width="120" height="40" rx="10" class="svg-borde" fill="#e3f7ec" stroke="#1f9d55"></rect>
+          <text x="530" y="45" text-anchor="middle" class="svg-texto-b">Desembolsar</text>
+          <circle cx="650" cy="40" r="18" class="svg-borde" fill="#e3f7ec" stroke="#1f9d55" stroke-width="3"></circle>
+          <!-- rama revision -->
+          <rect x="470" y="110" width="120" height="40" rx="10" class="svg-borde" fill="#fdf0d5" stroke="#b87900"></rect>
+          <text x="530" y="135" text-anchor="middle" class="svg-texto-b">Revisión</text>
+          <circle cx="650" cy="130" r="18" class="svg-borde" fill="#fdf0d5" stroke="#b87900" stroke-width="3"></circle>
+          <!-- rama rechazado -->
+          <rect x="470" y="200" width="120" height="40" rx="10" class="svg-borde" fill="#fde6e6" stroke="#d64545"></rect>
+          <text x="530" y="225" text-anchor="middle" class="svg-texto-b">Notificar no</text>
+          <circle cx="650" cy="220" r="18" class="svg-borde" fill="#fde6e6" stroke="#d64545" stroke-width="3"></circle>
+          <!-- flechas -->
+          <line x1="56" y1="130" x2="90" y2="130" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha4)"></line>
+          <line x1="242" y1="130" x2="308" y2="130" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha4)"></line>
+          <path d="M381 115 C 420 65, 435 40, 468 40" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha4)"></path>
+          <line x1="386" y1="130" x2="468" y2="130" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha4)"></line>
+          <path d="M381 145 C 420 195, 435 220, 468 220" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha4)"></path>
+          <line x1="590" y1="40" x2="630" y2="40" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha4)"></line>
+          <line x1="590" y1="130" x2="630" y2="130" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha4)"></line>
+          <line x1="590" y1="220" x2="630" y2="220" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha4)"></line>
+          <text x="408" y="40" class="svg-texto">APROBADO</text>
+          <text x="408" y="123" class="svg-texto">REVISION</text>
+          <text x="408" y="213" class="svg-texto">else</text>
+        </svg>
+        <figcaption>El gateway exclusivo del proceso de crédito: tres ramas, una sola se toma según <code class="en-linea">decision</code>. La rama de rechazo se modela como «por defecto» para no dejar ningún caso sin salida.</figcaption>
+      </figure>
+
+      <p>Las tres condiciones de salida, sobre la variable <code class="en-linea">decision</code> (un <code class="en-linea">String</code>), quedarían así:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">Condiciones del gateway de crédito</span></div>
+        <pre><code><span class="cmt">// Flujo → Desembolsar</span>
+<span class="str">"APROBADO"</span>.equals(decision)
+
+<span class="cmt">// Flujo → Revisión</span>
+<span class="str">"REVISION"</span>.equals(decision)
+
+<span class="cmt">// Flujo → Notificar rechazo  ➜  marcado como "Por defecto", sin expresión</span></code></pre>
+      </div>
+
+      <p>Y para arrancar el proceso, recuerda: el endpoint se autogenera. Solo mandas el JSON de entrada y el motor resuelve el gateway por ti.</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">arrancar-credito.http</span></div>
+        <pre><code><span class="kw">POST</span> http://localhost:8080/credito
+<span class="typ">Content-Type</span>: application/json
+
+{
+  <span class="str">"solicitante"</span>: <span class="str">"Ana López"</span>,
+  <span class="str">"monto"</span>: <span class="str">150000</span>,
+  <span class="str">"score"</span>: <span class="str">720</span>
+}
+<span class="cmt">// El motor evalúa las reglas, fija decision="APROBADO"</span>
+<span class="cmt">// y el gateway exclusivo dirige el flujo a "Desembolsar".</span></code></pre>
+      </div>
+
+      <div class="aviso tip"><div class="titulo">✅ Tip</div><p>Cuando una rama del exclusivo se decide por un valor de texto (<code class="en-linea">"APROBADO"</code>, <code class="en-linea">"REVISION"</code>…), prefiere <strong>una tarea de reglas que clasifique</strong> y deje el veredicto en una variable. El gateway queda limpio y legible, y la lógica de negocio vive en las reglas — el mismo principio de separar el «qué decidir» del «cómo enrutar».</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>Errores clásicos: fork sin join y casos sin cubrir</h2>
+
+      <div class="aviso ojo"><div class="titulo">⚠️ Ojo</div><p><strong>Todo fork paralelo necesita su join.</strong> Si abres tres ramas con un gateway paralelo y no las vuelves a unir con otro gateway paralelo, el proceso puede quedarse esperando para siempre por un camino que ya nadie va a cerrar — o, peor, terminar de forma inconsistente con ramas a medias. La regla práctica: cada <code class="en-linea">+</code> que divide tiene un <code class="en-linea">+</code> que reúne.</p></div>
+
+      <div class="aviso alto"><div class="titulo">⛔ Importante</div><p><strong>Cuida que las condiciones cubran todos los casos.</strong> En un gateway exclusivo, si ninguna condición se cumple y <em>no</em> definiste una rama «por defecto», el motor lanza una excepción en tiempo de ejecución porque no sabe por dónde seguir. Es el equivalente a una cadena de <code class="en-linea">if</code> sin <code class="en-linea">else</code> que se queda sin retorno: siempre define la rama por defecto.</p></div>
+
+      <p>Visualmente, así se ven el patrón correcto (fork con su join) frente al patrón roto (fork sin cierre):</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 660 230" role="img" aria-label="Comparación: arriba un fork paralelo con su join correspondiente; abajo un fork sin join cuyas ramas quedan abiertas">
+          <defs>
+            <marker id="flecha5" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+          <!-- CORRECTO -->
+          <text x="20" y="22" class="svg-texto-b" fill="#1f9d55">✔ Correcto: fork + join</text>
+          <path d="M70 70 L98 46 L126 70 L98 94 Z" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></path>
+          <line x1="98" y1="56" x2="98" y2="84" stroke="#b87900" stroke-width="2.5"></line>
+          <line x1="84" y1="70" x2="112" y2="70" stroke="#b87900" stroke-width="2.5"></line>
+          <path d="M300 70 L328 46 L356 70 L328 94 Z" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></path>
+          <line x1="328" y1="56" x2="328" y2="84" stroke="#b87900" stroke-width="2.5"></line>
+          <line x1="314" y1="70" x2="342" y2="70" stroke="#b87900" stroke-width="2.5"></line>
+          <rect x="170" y="34" width="90" height="30" rx="8" class="svg-borde svg-relleno"></rect>
+          <rect x="170" y="76" width="90" height="30" rx="8" class="svg-borde svg-relleno"></rect>
+          <circle cx="420" cy="70" r="17" class="svg-borde" fill="#eefaf2" stroke="#1f9d55" stroke-width="3"></circle>
+          <path d="M122 60 C 150 44, 158 49, 168 49" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha5)"></path>
+          <path d="M122 80 C 150 96, 158 91, 168 91" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha5)"></path>
+          <path d="M260 49 C 285 49, 295 60, 302 64" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha5)"></path>
+          <path d="M260 91 C 285 91, 295 80, 302 76" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha5)"></path>
+          <line x1="356" y1="70" x2="401" y2="70" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha5)"></line>
+          <!-- ROTO -->
+          <text x="20" y="158" class="svg-texto-b" fill="#d64545">✘ Roto: fork sin join</text>
+          <path d="M70 196 L98 172 L126 196 L98 220 Z" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></path>
+          <line x1="98" y1="182" x2="98" y2="210" stroke="#b87900" stroke-width="2.5"></line>
+          <line x1="84" y1="196" x2="112" y2="196" stroke="#b87900" stroke-width="2.5"></line>
+          <rect x="170" y="160" width="90" height="30" rx="8" class="svg-borde" fill="#fdeeee" stroke="#d64545"></rect>
+          <rect x="170" y="202" width="90" height="30" rx="8" class="svg-borde" fill="#fdeeee" stroke="#d64545"></rect>
+          <path d="M122 186 C 150 170, 158 175, 168 175" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha5)"></path>
+          <path d="M122 206 C 150 222, 158 217, 168 217" stroke="#495567" stroke-width="2" fill="none" marker-end="url(#flecha5)"></path>
+          <text x="280" y="180" class="svg-texto" fill="#d64545">⟂ rama abierta</text>
+          <text x="280" y="222" class="svg-texto" fill="#d64545">⟂ rama abierta</text>
+        </svg>
+        <figcaption>Arriba, el fork se cierra con su join y el proceso termina limpio. Abajo, las ramas quedan colgando: el proceso no puede converger.</figcaption>
+      </figure>
+    </section>
+
+    <section class="seccion">
+      <h2>Tabla resumen: los tres gateways</h2>
+      <table class="tabla">
+        <thead>
+          <tr><th>Gateway</th><th>Símbolo</th><th>Semántica</th><th>Analogía en código</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Exclusivo</strong> <span class="pildora azul">XOR</span></td>
+            <td><strong>X</strong> (rombo con equis)</td>
+            <td>Toma <strong>un solo</strong> camino: el de la primera condición verdadera. Necesita rama por defecto.</td>
+            <td><code>if / else if / else</code> — o un <code>switch</code> sobre una variable.</td>
+          </tr>
+          <tr>
+            <td><strong>Paralelo</strong> <span class="pildora aqua">AND</span></td>
+            <td><strong>+</strong> (rombo con cruz)</td>
+            <td>Activa <strong>todas</strong> las ramas a la vez (fork) y, al converger, <strong>espera a todas</strong> (join). Sin condiciones.</td>
+            <td>Varios <code>CompletableFuture</code> lanzados juntos + <code>allOf(...).join()</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Inclusivo</strong> <span class="pildora ambar">OR</span></td>
+            <td><strong>O</strong> (rombo con círculo)</td>
+            <td>Activa <strong>todas las ramas cuya condición sea verdadera</strong> (una, varias o todas) y espera solo a las activadas.</td>
+            <td>Varios <code>if</code> independientes (no <code>else if</code>): cada uno se evalúa por separado.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="puente">
+        <p>El cierre que vale la pena recordar: el <strong>exclusivo es tu <code class="en-linea">if/else</code></strong>, declarado en el diagrama; y el <strong>paralelo es lanzar varias tareas concurrentes y hacer <code class="en-linea">join</code></strong>, pero <strong>sin que tú toques <code class="en-linea">Thread</code>, <code class="en-linea">ExecutorService</code> ni <code class="en-linea">CompletableFuture</code></strong>. El motor de Kogito orquesta la concurrencia, la espera y la unión de ramas. Tú decides la <em>topología</em> del flujo; el motor se encarga de ejecutarla con seguridad.</p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>De un vistazo</h2>
+      <ol class="pasos">
+        <li>Un <strong>gateway</strong> es un rombo que bifurca o une el flujo; no ejecuta lógica de negocio, solo enruta.</li>
+        <li>El <strong>exclusivo (X)</strong> toma un camino según la primera condición verdadera: es tu <code class="en-linea">if/else</code>. Siempre con rama por defecto.</li>
+        <li>El <strong>paralelo (+)</strong> lanza todas las ramas a la vez y luego las une esperando a todas: concurrencia sin manejar hilos.</li>
+        <li>El <strong>inclusivo (O)</strong> activa todas las ramas cuya condición se cumpla, ni más ni menos.</li>
+        <li>Las <strong>condiciones</strong> son expresiones booleanas sobre las variables del proceso; cuídalas para no dejar casos sin cubrir.</li>
+        <li>Cada <strong>fork tiene su join</strong>. Y, como siempre, el endpoint que dispara el proceso se autogenera.</li>
+      </ol>
+    </section>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="05-variables-datos.html"><div class="dir">← Anterior</div><div class="tit">Variables y datos del proceso</div></a>
+    <a href="07-tareas-humanas.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">Tareas humanas</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot · Java 21</span>
+  </footer>
+
+</body>
+</html>

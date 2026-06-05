@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tema 11 · Probar el proceso: JUnit y Mockito — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="10-persistencia-cloud-native.html" class="oculta-movil">← Anterior</a>
+    <a href="12-capstone-aprobacion-credito.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Tema 11</span>
+    <h1>Probar el proceso: JUnit y Mockito</h1>
+    <p class="bajada">Un proceso es código que se ejecuta. Y todo código que se ejecuta merece pruebas automatizadas. Aquí pondrás bajo red de seguridad tus decisiones, tu flujo y tu endpoint REST — con las mismas herramientas que ya dominas.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Por qué probar un proceso</h2>
+      <p>Un proceso de negocio cambia. El día de mañana el área de riesgo dirá «ahora aprobamos hasta 300&nbsp;000 si el score es 720» o «agreguen una rama de revisión manual para montos altos». Cada uno de esos cambios mueve una condición de un <em>gateway</em>, ajusta una regla o reordena una tarea. Y cada cambio puede romper, sin que nadie lo note, un camino que ayer funcionaba.</p>
+      <p>Esa es exactamente la situación en la que las <strong>pruebas de regresión automatizadas</strong> ganan su sueldo: corres la batería completa, en segundos, y sabes si tu cambio de hoy rompió un comportamiento de ayer. Sin pruebas, la única red de seguridad es probar a mano cada rama en cada despliegue — algo que nadie hace de forma fiable más de un par de veces.</p>
+
+      <div class="puente">
+        <p>No estás aprendiendo un sistema de pruebas nuevo. Son los <strong>mismos JUnit 5 y Mockito</strong> del Módulo&nbsp;5, las mismas <code class="en-linea">assertThat(...)</code> de AssertJ, el mismo <code class="en-linea">@SpringBootTest</code>. Lo único que cambia es <em>qué</em> pruebas: en lugar de un <code class="en-linea">Service</code>, ahora pruebas un proceso BPMN y una decisión DMN. La mecánica es idéntica.</p>
+      </div>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota del capstone</div>
+        <p>Todos los ejemplos de esta página corresponden al proyecto del <strong>capstone</strong> (carpeta <code class="en-linea">proyecto/aprobacion-credito</code>): el proceso <code class="en-linea">aprobacionCredito</code>, el modelo <code class="en-linea">SolicitudCredito</code> y la decisión DMN que ya conoces de los temas anteriores. En el Tema&nbsp;12 los juntarás todos.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>La pirámide de pruebas del proceso</h2>
+      <p>Como en cualquier sistema, conviene probar mucho en lo barato y rápido, y poco en lo caro y lento. La base de la pirámide son pruebas pequeñas y veloces que aíslan una pieza; la punta son pruebas amplias que ejercitan todo junto pasando por la red. Aplicado a un servicio Kogito, queda en tres niveles bien definidos.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 640 380" role="img" aria-label="Pirámide de pruebas de un proceso Kogito con tres niveles: en la base, prueba de decisión DMN aislada, muchas y rápidas; en medio, prueba del proceso arrancando una instancia; en la punta, prueba de integración REST del endpoint, pocas y lentas">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Nivel 3: REST (punta) -->
+          <polygon points="320,30 410,130 230,130" fill="#fde6e6" stroke="#d64545" stroke-width="2"></polygon>
+          <text x="320" y="95" text-anchor="middle" class="svg-texto-b" fill="#d64545">3 · REST</text>
+
+          <!-- Nivel 2: Proceso (medio) -->
+          <polygon points="225,135 415,135 480,245 160,245" fill="#fdf0d5" stroke="#f0a202" stroke-width="2"></polygon>
+          <text x="320" y="185" text-anchor="middle" class="svg-texto-b" fill="#b87900">2 · Proceso</text>
+          <text x="320" y="208" text-anchor="middle" class="svg-texto">arrancar instancia · verificar camino y variables</text>
+
+          <!-- Nivel 1: Decisión DMN (base) -->
+          <polygon points="155,250 485,250 555,360 85,360" fill="#e3f0fb" stroke="#1464a5" stroke-width="2"></polygon>
+          <text x="320" y="300" text-anchor="middle" class="svg-texto-b" fill="#1464a5">1 · Decisión (DMN) aislada</text>
+          <text x="320" y="323" text-anchor="middle" class="svg-texto">muchas · rápidas · sin arrancar el motor de procesos</text>
+
+          <!-- Eje rápido/lento, barato/caro -->
+          <line x1="600" y1="60" x2="600" y2="340" class="svg-flecha"></line>
+          <text x="618" y="80" class="svg-texto" transform="rotate(90 618 80)">menos · más lentas</text>
+          <text x="600" y="52" text-anchor="middle" class="svg-texto" fill="#495567">caras</text>
+          <text x="600" y="372" text-anchor="middle" class="svg-texto" fill="#495567">baratas</text>
+        </svg>
+        <figcaption>La pirámide de pruebas aplicada a un servicio Kogito: muchas pruebas de decisión en la base, algunas pruebas de proceso en medio, unas pocas pruebas REST de extremo a extremo en la punta.</figcaption>
+      </figure>
+
+      <ol class="pasos">
+        <li><strong>Prueba de decisión (DMN) aislada.</strong> Evalúas el modelo DMN con un conjunto de datos de entrada y compruebas la salida. No arrancas el motor de procesos ni levantas el servidor: es prácticamente una prueba unitaria. Aquí cabe la combinatoria fina (cada tramo de score, cada límite de monto), porque cada caso cuesta milisegundos.</li>
+        <li><strong>Prueba del proceso.</strong> Arrancas una instancia del proceso <code class="en-linea">aprobacionCredito</code> con una <code class="en-linea">SolicitudCredito</code> de entrada y verificas dos cosas: que la instancia llegó al estado esperado (<code class="en-linea">COMPLETED</code>) y que las variables de salida quedaron como debían. Esto valida que el flujo, los <em>gateways</em> y las tareas estén bien cableados.</li>
+        <li><strong>Prueba de integración REST.</strong> Levantas la aplicación completa y golpeas el endpoint autogenerado (<code class="en-linea">POST /aprobacionCredito</code>) con un JSON real. Validas el contrato HTTP de extremo a extremo: códigos de estado, forma del cuerpo, serialización. Pocas, pero imprescindibles.</li>
+      </ol>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>La regla práctica: lo que puedas probar en el nivel 1, no lo pruebes en el 3. Si una rama depende solo de la lógica de la decisión, valídala como decisión aislada (rápida) y deja para el nivel REST únicamente la verificación del contrato y la integración. Tu suite se mantendrá veloz y dará retroalimentación inmediata.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Nivel 2: probar el proceso con JUnit 5 y la API de Kogito</h2>
+      <p>Kogito expone una API Java limpia para manejar procesos en pruebas. La pieza central es <code class="en-linea">org.kie.kogito.process.Processes</code>: un <em>bean</em> que Spring inyecta y que actúa como catálogo de todos los procesos compilados en tu aplicación. A partir de él obtienes el proceso por su ID, le pasas un modelo con la variable de entrada, creas una instancia y la arrancas.</p>
+
+      <h3>El ciclo de una instancia en una prueba</h3>
+      <p>El patrón siempre es el mismo: <em>obtener proceso → crear modelo → crear instancia → arrancar → afirmar estado y variables</em>. Este pequeño diagrama lo resume.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 720 130" role="img" aria-label="Secuencia de una prueba de proceso: Processes obtiene el proceso aprobacionCredito, se crea un modelo con la solicitud, se crea y arranca una instancia, y se afirma el estado COMPLETED y las variables de salida">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- inicio -->
+          <circle cx="40" cy="65" r="20" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></circle>
+
+          <!-- processes.processById -->
+          <rect x="90" y="40" width="150" height="50" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="165" y="60" text-anchor="middle" class="svg-texto-b">processById</text>
+          <text x="165" y="78" text-anchor="middle" class="svg-texto">"aprobacionCredito"</text>
+
+          <!-- createInstance -->
+          <rect x="280" y="40" width="150" height="50" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="355" y="60" text-anchor="middle" class="svg-texto-b">createInstance</text>
+          <text x="355" y="78" text-anchor="middle" class="svg-texto">con solicitud</text>
+
+          <!-- start -->
+          <rect x="470" y="40" width="120" height="50" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="530" y="70" text-anchor="middle" class="svg-texto-b">start()</text>
+
+          <!-- fin: assert -->
+          <circle cx="660" cy="65" r="20" class="svg-borde" fill="#fde6e6" stroke="#d64545"></circle>
+          <text x="660" y="113" text-anchor="middle" class="svg-texto">assertThat</text>
+
+          <!-- flechas -->
+          <line x1="60" y1="65" x2="90" y2="65" class="svg-flecha"></line>
+          <line x1="240" y1="65" x2="280" y2="65" class="svg-flecha"></line>
+          <line x1="430" y1="65" x2="470" y2="65" class="svg-flecha"></line>
+          <line x1="590" y1="65" x2="638" y2="65" class="svg-flecha"></line>
+        </svg>
+        <figcaption>El recorrido de una prueba de proceso: del catálogo <code class="en-linea">Processes</code> al veredicto final sobre el estado y las variables.</figcaption>
+      </figure>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">AprobacionCreditoProcessTest.java</span></div>
+        <pre><code><span class="kw">package</span> com.academy.kogito.proceso;
+
+<span class="kw">import</span> com.academy.kogito.model.SolicitudCredito;
+<span class="kw">import</span> org.junit.jupiter.api.Test;
+<span class="kw">import</span> org.kie.kogito.Model;
+<span class="kw">import</span> org.kie.kogito.process.Process;
+<span class="kw">import</span> org.kie.kogito.process.ProcessInstance;
+<span class="kw">import</span> org.kie.kogito.process.Processes;
+<span class="kw">import</span> org.springframework.beans.factory.annotation.Autowired;
+<span class="kw">import</span> org.springframework.boot.test.context.SpringBootTest;
+
+<span class="kw">import</span> java.math.BigDecimal;
+<span class="kw">import</span> java.util.Map;
+
+<span class="kw">import static</span> org.assertj.core.api.Assertions.assertThat;
+
+<span class="cmt">// Levanta el contexto de Spring: Kogito ya compiló el proceso</span>
+<span class="cmt">// y registró el bean Processes que vamos a inyectar.</span>
+<span class="anot">@SpringBootTest</span>
+<span class="kw">class</span> <span class="typ">AprobacionCreditoProcessTest</span> {
+
+    <span class="anot">@Autowired</span>
+    <span class="typ">Processes</span> processes; <span class="cmt">// catálogo de todos los procesos de la app</span>
+
+    <span class="anot">@Test</span>
+    <span class="kw">void</span> <span class="typ">solicitudConBuenScoreTerminaAprobada</span>() {
+        <span class="cmt">// 1) Obtener el proceso por su ID (el del archivo .bpmn)</span>
+        <span class="typ">Process</span>&lt;? <span class="kw">extends</span> <span class="typ">Model</span>&gt; proceso =
+                processes.processById(<span class="str">"aprobacionCredito"</span>);
+
+        <span class="cmt">// 2) Preparar la variable de entrada del proceso</span>
+        <span class="typ">SolicitudCredito</span> solicitud = <span class="kw">new</span> <span class="typ">SolicitudCredito</span>();
+        solicitud.setNombre(<span class="str">"Ana Pérez"</span>);
+        solicitud.setIngresosMensuales(<span class="kw">new</span> <span class="typ">BigDecimal</span>(<span class="str">"45000"</span>));
+        solicitud.setMontoSolicitado(<span class="kw">new</span> <span class="typ">BigDecimal</span>(<span class="str">"120000"</span>));
+        solicitud.setPlazoMeses(<span class="str">24</span>);
+        solicitud.setTieneMora(<span class="kw">false</span>);
+
+        <span class="cmt">// 3) Empaquetar la variable en el modelo del proceso</span>
+        <span class="typ">Model</span> modelo = proceso.createModel();
+        modelo.fromMap(<span class="typ">Map</span>.of(<span class="str">"solicitud"</span>, solicitud));
+
+        <span class="cmt">// 4) Crear y arrancar la instancia</span>
+        <span class="typ">ProcessInstance</span>&lt;? <span class="kw">extends</span> <span class="typ">Model</span>&gt; instancia =
+                proceso.createInstance(modelo);
+        instancia.start();
+
+        <span class="cmt">// 5) Afirmar el ESTADO: el proceso terminó por completo</span>
+        assertThat(instancia.status())
+                .isEqualTo(<span class="typ">ProcessInstance</span>.STATE_COMPLETED); <span class="cmt">// == 2</span>
+
+        <span class="cmt">// 6) Afirmar las VARIABLES de salida</span>
+        <span class="typ">Map</span>&lt;<span class="typ">String</span>, <span class="typ">Object</span>&gt; salida = instancia.variables().toMap();
+        <span class="typ">SolicitudCredito</span> resultado =
+                (<span class="typ">SolicitudCredito</span>) salida.get(<span class="str">"solicitud"</span>);
+
+        assertThat(resultado.getDecision()).isEqualTo(<span class="str">"APROBADO"</span>);
+        assertThat(resultado.getScoreCrediticio()).isGreaterThanOrEqualTo(<span class="str">700</span>);
+        assertThat(resultado.getEvaluacion()).isNotNull();
+    }
+}</code></pre>
+      </div>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Sobre <code class="en-linea">status()</code> y los estados</div>
+        <p><code class="en-linea">ProcessInstance.status()</code> devuelve un entero con los estados de Kogito: <code class="en-linea">STATE_ACTIVE</code> (1), <code class="en-linea">STATE_COMPLETED</code> (2), <code class="en-linea">STATE_ABORTED</code> (3), <code class="en-linea">STATE_SUSPENDED</code> (4) y <code class="en-linea">STATE_ERROR</code> (5). Si el proceso tuviera una tarea humana en medio, tras <code class="en-linea">start()</code> quedaría en <code class="en-linea">STATE_ACTIVE</code> esperando; ahí completarías la tarea con la API y volverías a afirmar.</p>
+      </div>
+
+      <div class="puente">
+        <p>Fíjate en el <code class="en-linea">assertThat(...)</code> de AssertJ y en el <code class="en-linea">@Test</code> de JUnit&nbsp;5: son idénticos a los que escribías para probar un <code class="en-linea">Service</code> de Spring. El <strong>«Working with assertions»</strong> que practicaste —encadenar <code class="en-linea">.isEqualTo()</code>, <code class="en-linea">.isGreaterThanOrEqualTo()</code>, <code class="en-linea">.isNotNull()</code> para mensajes de error legibles— se aplica tal cual sobre las variables del proceso.</p>
+      </div>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip · una prueba por camino</div>
+        <p>Escribe un <code class="en-linea">@Test</code> por cada rama del proceso: uno para <span class="pildora verde">APROBADO</span>, otro para <span class="pildora ambar">REVISION</span>, otro para <span class="pildora rojo">RECHAZADO</span>. Así cada cambio futuro en un <em>gateway</em> o una regla disparará exactamente la prueba que debe fallar, y sabrás de inmediato qué camino se rompió.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Nivel 1: probar la decisión (DMN) aislada</h2>
+      <p>Antes de probar todo el flujo, conviene clavar la lógica de negocio donde vive: la decisión DMN que clasifica la solicitud. Kogito expone <code class="en-linea">org.kie.kogito.decision.DecisionModels</code> para evaluar un modelo DMN sin arrancar el motor de procesos. Le pasas un mapa de entradas, ejecuta el modelo y te devuelve el resultado.</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">EvaluacionCreditoDmnTest.java</span></div>
+        <pre><code><span class="kw">package</span> com.academy.kogito.decision;
+
+<span class="kw">import</span> org.junit.jupiter.api.Test;
+<span class="kw">import</span> org.kie.kogito.decision.DecisionModel;
+<span class="kw">import</span> org.kie.kogito.decision.DecisionModels;
+<span class="kw">import</span> org.kie.kogito.dmn.rest.DMNResult;
+<span class="kw">import</span> org.springframework.beans.factory.annotation.Autowired;
+<span class="kw">import</span> org.springframework.boot.test.context.SpringBootTest;
+
+<span class="kw">import</span> java.util.Map;
+
+<span class="kw">import static</span> org.assertj.core.api.Assertions.assertThat;
+
+<span class="anot">@SpringBootTest</span>
+<span class="kw">class</span> <span class="typ">EvaluacionCreditoDmnTest</span> {
+
+    <span class="anot">@Autowired</span>
+    <span class="typ">DecisionModels</span> decisionModels;
+
+    <span class="anot">@Test</span>
+    <span class="kw">void</span> <span class="typ">scoreAltoYMontoBajoDaAprobado</span>() {
+        <span class="cmt">// Localiza el modelo por su namespace y nombre (los del .dmn)</span>
+        <span class="typ">DecisionModel</span> modelo = decisionModels.getDecisionModel(
+                <span class="str">"https://academy.com/dmn/scoringCredito"</span>, <span class="str">"scoringCredito"</span>);
+
+        <span class="cmt">// Entradas del DMN, igual que las columnas de tu tabla de decisión</span>
+        <span class="typ">Map</span>&lt;<span class="typ">String</span>, <span class="typ">Object</span>&gt; entradas = <span class="typ">Map</span>.of(
+                <span class="str">"score"</span>, <span class="str">730</span>,
+                <span class="str">"monto"</span>, <span class="str">120000</span>,
+                <span class="str">"tieneMora"</span>, <span class="kw">false</span>);
+
+        <span class="typ">DMNResult</span> resultado =
+                modelo.evaluateAll(modelo.newContext(entradas));
+
+        <span class="cmt">// El DMN no tuvo errores y la decisión es la esperada</span>
+        assertThat(resultado.hasErrors()).isFalse();
+        assertThat(resultado.getDecisionResultByName(<span class="str">"evaluacion"</span>)
+                .getResult()).isEqualTo(<span class="str">"APROBADO"</span>);
+    }
+}</code></pre>
+      </div>
+
+      <div class="aviso ojo">
+        <div class="titulo">⚠️ Ojo · namespace y nombre del DMN</div>
+        <p>El primer argumento de <code class="en-linea">getDecisionModel(...)</code> es el <strong>namespace</strong> del modelo y el segundo su <strong>nombre</strong> — ambos definidos en el archivo <code class="en-linea">.dmn</code>. Si los confundes, obtendrás un <code class="en-linea">null</code> y un <code class="en-linea">NullPointerException</code> al evaluar. Cópialos tal cual del editor de DMN.</p>
+      </div>
+
+      <p>Como cada evaluación cuesta microsegundos, este es el lugar para la combinatoria exhaustiva. Una prueba parametrizada de JUnit&nbsp;5 cubre todos los tramos de score de un solo método.</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">EvaluacionCreditoDmnTest.java (parametrizada)</span></div>
+        <pre><code>    <span class="anot">@ParameterizedTest</span>
+    <span class="anot">@CsvSource</span>({
+        <span class="str">"800, 100000, false, APROBADO"</span>,
+        <span class="str">"650, 100000, false, REVISION"</span>,
+        <span class="str">"500, 100000, false, RECHAZADO"</span>,
+        <span class="str">"800, 100000, true,  RECHAZADO"</span>   <span class="cmt">// con mora: siempre rechazado</span>
+    })
+    <span class="kw">void</span> <span class="typ">clasificaSegunScoreYMora</span>(<span class="kw">int</span> score, <span class="kw">int</span> monto,
+                                <span class="kw">boolean</span> tieneMora, <span class="typ">String</span> esperado) {
+        <span class="typ">DecisionModel</span> modelo = decisionModels.getDecisionModel(
+                <span class="str">"https://academy.com/dmn/scoringCredito"</span>, <span class="str">"scoringCredito"</span>);
+
+        <span class="typ">DMNResult</span> r = modelo.evaluateAll(modelo.newContext(<span class="typ">Map</span>.of(
+                <span class="str">"score"</span>, score, <span class="str">"monto"</span>, monto, <span class="str">"tieneMora"</span>, tieneMora)));
+
+        assertThat(r.getDecisionResultByName(<span class="str">"evaluacion"</span>).getResult())
+                .isEqualTo(esperado);
+    }</code></pre>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Mockito para aislar lo que rodea al proceso</h2>
+      <p>Tu proceso no vive solo: algunas tareas llaman a colaboradores externos. Por ejemplo, una <strong>tarea de servicio</strong> que, al final del flujo, invoca una <em>pasarela de notificación</em> para avisar al solicitante por correo o SMS. En una prueba no quieres mandar correos de verdad: quieres <strong>aislar el proceso</strong> y verificar que <em>habría</em> notificado, sin tocar el mundo exterior.</p>
+      <p>Esto es Mockito puro, el del Módulo&nbsp;5. Reemplazas el colaborador real por un <em>mock</em> con <code class="en-linea">@MockBean</code>, programas su comportamiento con <code class="en-linea">when(...)</code> y, tras arrancar el proceso, compruebas con <code class="en-linea">verify(...)</code> que el proceso lo llamó como debía.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 660 180" role="img" aria-label="El proceso aprobacionCredito incluye una tarea de servicio que llama a una pasarela de notificación; en la prueba esa pasarela se reemplaza por un mock de Mockito que registra la llamada en lugar de enviarla">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- contenedor proceso -->
+          <rect x="20" y="30" width="340" height="120" rx="14" fill="#f5f8fc" stroke="#004481" stroke-width="2" stroke-dasharray="6 4"></rect>
+          <text x="40" y="52" class="svg-texto-b">proceso aprobacionCredito</text>
+
+          <!-- inicio -->
+          <circle cx="65" cy="100" r="16" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></circle>
+          <!-- tarea servicio -->
+          <rect x="120" y="80" width="170" height="44" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="205" y="100" text-anchor="middle" class="svg-texto-b">Tarea de servicio</text>
+          <text x="205" y="116" text-anchor="middle" class="svg-texto">notificar(...)</text>
+          <line x1="81" y1="100" x2="120" y2="100" class="svg-flecha"></line>
+
+          <!-- mock -->
+          <rect x="440" y="62" width="200" height="80" rx="12" fill="#ddf7f7" stroke="#028484" stroke-width="2"></rect>
+          <text x="540" y="92" text-anchor="middle" class="svg-texto-b" fill="#028484">PasarelaNotificacion</text>
+          <text x="540" y="112" text-anchor="middle" class="svg-texto" fill="#028484">@MockBean</text>
+          <text x="540" y="130" text-anchor="middle" class="svg-texto" fill="#028484">(registra, no envía)</text>
+
+          <!-- flecha proceso -> mock -->
+          <line x1="290" y1="100" x2="440" y2="100" class="svg-flecha"></line>
+          <text x="365" y="90" text-anchor="middle" class="svg-texto">llamada</text>
+        </svg>
+        <figcaption>La tarea de servicio del proceso llama a la pasarela de notificación; en la prueba, esa pasarela es un <em>mock</em> que registra la llamada para poder afirmar sobre ella con <code class="en-linea">verify(...)</code>.</figcaption>
+      </figure>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">NotificacionProcessTest.java</span></div>
+        <pre><code><span class="kw">package</span> com.academy.kogito.proceso;
+
+<span class="kw">import</span> com.academy.kogito.model.SolicitudCredito;
+<span class="kw">import</span> com.academy.kogito.servicio.PasarelaNotificacion;
+<span class="kw">import</span> org.junit.jupiter.api.Test;
+<span class="kw">import</span> org.kie.kogito.Model;
+<span class="kw">import</span> org.kie.kogito.process.Process;
+<span class="kw">import</span> org.kie.kogito.process.ProcessInstance;
+<span class="kw">import</span> org.kie.kogito.process.Processes;
+<span class="kw">import</span> org.springframework.beans.factory.annotation.Autowired;
+<span class="kw">import</span> org.springframework.boot.test.context.SpringBootTest;
+<span class="kw">import</span> org.springframework.boot.test.mock.mockito.MockBean;
+
+<span class="kw">import</span> java.math.BigDecimal;
+<span class="kw">import</span> java.util.Map;
+
+<span class="kw">import static</span> org.mockito.ArgumentMatchers.any;
+<span class="kw">import static</span> org.mockito.ArgumentMatchers.contains;
+<span class="kw">import static</span> org.mockito.Mockito.verify;
+<span class="kw">import static</span> org.mockito.Mockito.when;
+<span class="kw">import static</span> org.assertj.core.api.Assertions.assertThat;
+
+<span class="anot">@SpringBootTest</span>
+<span class="kw">class</span> <span class="typ">NotificacionProcessTest</span> {
+
+    <span class="anot">@Autowired</span>
+    <span class="typ">Processes</span> processes;
+
+    <span class="cmt">// Sustituye el bean real de notificación por un mock en el contexto</span>
+    <span class="anot">@MockBean</span>
+    <span class="typ">PasarelaNotificacion</span> pasarela;
+
+    <span class="anot">@Test</span>
+    <span class="kw">void</span> <span class="typ">alAprobarSeNotificaAlSolicitante</span>() {
+        <span class="cmt">// Programamos el mock: cuando le pidan notificar, finge éxito</span>
+        when(pasarela.enviar(any(), any())).thenReturn(<span class="kw">true</span>);
+
+        <span class="typ">SolicitudCredito</span> solicitud = <span class="kw">new</span> <span class="typ">SolicitudCredito</span>();
+        solicitud.setNombre(<span class="str">"Luis Ramírez"</span>);
+        solicitud.setIngresosMensuales(<span class="kw">new</span> <span class="typ">BigDecimal</span>(<span class="str">"60000"</span>));
+        solicitud.setMontoSolicitado(<span class="kw">new</span> <span class="typ">BigDecimal</span>(<span class="str">"100000"</span>));
+        solicitud.setTieneMora(<span class="kw">false</span>);
+
+        <span class="typ">Process</span>&lt;? <span class="kw">extends</span> <span class="typ">Model</span>&gt; proceso =
+                processes.processById(<span class="str">"aprobacionCredito"</span>);
+        <span class="typ">Model</span> modelo = proceso.createModel();
+        modelo.fromMap(<span class="typ">Map</span>.of(<span class="str">"solicitud"</span>, solicitud));
+
+        <span class="typ">ProcessInstance</span>&lt;? <span class="kw">extends</span> <span class="typ">Model</span>&gt; instancia =
+                proceso.createInstance(modelo);
+        instancia.start();
+
+        assertThat(instancia.status())
+                .isEqualTo(<span class="typ">ProcessInstance</span>.STATE_COMPLETED);
+
+        <span class="cmt">// Verificamos que el proceso SÍ llamó a la pasarela,</span>
+        <span class="cmt">// exactamente una vez y con un mensaje de aprobación.</span>
+        verify(pasarela).enviar(contains(<span class="str">"Luis Ramírez"</span>),
+                                contains(<span class="str">"APROBADO"</span>));
+    }
+}</code></pre>
+      </div>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip · verify cuenta llamadas</div>
+        <p>Por defecto <code class="en-linea">verify(pasarela)</code> exige <strong>exactamente una</strong> llamada. Para afirmar que un camino <em>no</em> notifica —por ejemplo, una rama de rechazo silencioso— usa <code class="en-linea">verify(pasarela, never()).enviar(any(), any())</code>. Igual que en tus pruebas de <code class="en-linea">Service</code>.</p>
+      </div>
+
+      <div class="aviso alto">
+        <div class="titulo">⛔ Error común</div>
+        <p>No confundas <strong>mockear el colaborador</strong> con <strong>mockear el proceso</strong>. El proceso es lo que estás probando: déjalo correr de verdad con la API de Kogito. El <em>mock</em> es solo para las dependencias <em>alrededor</em> (correo, pagos, servicios remotos). Si mockeas el proceso, no pruebas nada.</p>
+      </div>
+
+      <div class="puente">
+        <p>Esto es, literalmente, el <code class="en-linea">when(...).thenReturn(...)</code> y el <code class="en-linea">verify(...)</code> del Módulo&nbsp;5. La única novedad es <code class="en-linea">@MockBean</code>: en vez de inyectar el <em>mock</em> a mano en un constructor, le dices a Spring que lo coloque en el contexto, para que la tarea de servicio del proceso reciba el sustituto en lugar del bean real.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Nivel 3: prueba de integración REST del endpoint</h2>
+      <p>En la punta de la pirámide validas el contrato HTTP completo. Recuerda: el endpoint del proceso <strong>se autogenera</strong> a partir del ID <code class="en-linea">aprobacionCredito</code> — tú nunca escribes un <code class="en-linea">@RestController</code>. Para probarlo levantas la app en un puerto real y la golpeas con REST&nbsp;Assured (o con <code class="en-linea">TestRestTemplate</code>), exactamente como probarías cualquier API de Spring Boot.</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">AprobacionCreditoRestIT.java</span></div>
+        <pre><code><span class="kw">package</span> com.academy.kogito.rest;
+
+<span class="kw">import</span> io.restassured.http.ContentType;
+<span class="kw">import</span> org.junit.jupiter.api.Test;
+<span class="kw">import</span> org.springframework.boot.test.context.SpringBootTest;
+<span class="kw">import</span> org.springframework.boot.test.web.server.LocalServerPort;
+
+<span class="kw">import static</span> io.restassured.RestAssured.given;
+<span class="kw">import static</span> org.hamcrest.Matchers.equalTo;
+
+<span class="cmt">// Levanta el servidor en un puerto aleatorio: integración real.</span>
+<span class="anot">@SpringBootTest</span>(webEnvironment = <span class="typ">SpringBootTest</span>.WebEnvironment.RANDOM_PORT)
+<span class="kw">class</span> <span class="typ">AprobacionCreditoRestIT</span> {
+
+    <span class="anot">@LocalServerPort</span>
+    <span class="kw">int</span> puerto;
+
+    <span class="anot">@Test</span>
+    <span class="kw">void</span> <span class="typ">postCreaInstanciaYDevuelveDecision</span>() {
+        given()
+            .port(puerto)
+            .contentType(<span class="typ">ContentType</span>.JSON)
+            .body(<span class="str">"""
+                {
+                  "solicitud": {
+                    "nombre": "Ana Pérez",
+                    "ingresosMensuales": 45000,
+                    "montoSolicitado": 120000,
+                    "plazoMeses": 24,
+                    "tieneMora": false
+                  }
+                }
+                """</span>)
+        .when()
+            <span class="cmt">// Endpoint AUTOGENERADO a partir del id del proceso</span>
+            .post(<span class="str">"/aprobacionCredito"</span>)
+        .then()
+            .statusCode(<span class="str">201</span>)               <span class="cmt">// Created: la instancia se creó</span>
+            .body(<span class="str">"solicitud.decision"</span>, equalTo(<span class="str">"APROBADO"</span>))
+            .body(<span class="str">"id"</span>, org.hamcrest.Matchers.notNullValue());
+    }
+}</code></pre>
+      </div>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota · sufijo <code class="en-linea">IT</code></div>
+        <p>Por convención de Maven, las pruebas de integración terminan en <code class="en-linea">...IT</code> y las corre el <em>plugin</em> <code class="en-linea">failsafe</code> en la fase <code class="en-linea">verify</code>, no <code class="en-linea">surefire</code> en <code class="en-linea">test</code>. Así separas la suite rápida (niveles 1 y 2) de la lenta (nivel 3) y puedes correr solo la primera durante el desarrollo.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Resumen: qué prueba cada nivel y con qué</h2>
+      <table class="tabla">
+        <thead>
+          <tr><th>Nivel de prueba</th><th>Qué valida</th><th>Herramientas</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pildora azul">1 · Decisión (DMN)</span></td>
+            <td>La lógica de negocio aislada: dado un <code>score</code>, <code>monto</code> y <code>tieneMora</code>, la decisión <code>evaluacion</code> es la correcta. Sin arrancar el motor de procesos.</td>
+            <td>JUnit&nbsp;5 · AssertJ · <code>DecisionModels</code> / <code>DecisionModel</code></td>
+          </tr>
+          <tr>
+            <td><span class="pildora ambar">2 · Proceso</span></td>
+            <td>El flujo completo: arranca la instancia con una <code>SolicitudCredito</code>, recorre los <em>gateways</em> y tareas, termina en <code>COMPLETED</code> y deja las variables esperadas.</td>
+            <td>JUnit&nbsp;5 · AssertJ · <code>Processes</code> / <code>Process</code> / <code>ProcessInstance</code> · Mockito (<code>@MockBean</code>) para aislar colaboradores</td>
+          </tr>
+          <tr>
+            <td><span class="pildora rojo">3 · REST</span></td>
+            <td>El contrato HTTP de extremo a extremo del endpoint autogenerado: código de estado, forma del JSON, serialización. Integración real con el servidor levantado.</td>
+            <td>JUnit&nbsp;5 · <code>@SpringBootTest(RANDOM_PORT)</code> · REST&nbsp;Assured / <code>TestRestTemplate</code> · Maven failsafe</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="chips">
+        <span class="chip"><span class="bpmn-tarea">●</span> Mismos JUnit y Mockito del Módulo&nbsp;5</span>
+        <span class="chip"><span class="bpmn-evento">●</span> Decisión rápida en la base</span>
+        <span class="chip"><span class="bpmn-gateway">●</span> Proceso en el centro</span>
+        <span class="chip"><span class="bpmn-flujo">●</span> REST en la punta</span>
+      </div>
+
+      <div class="puente">
+        <p>El cierre del tema es el mismo mensaje con el que empezó: no hay herramientas nuevas que aprender. Son <strong>los mismos JUnit y Mockito</strong> que ya usas a diario, aplicados ahora al proceso y a la decisión. Lo único distinto son las tres APIs de Kogito que actúan como punto de entrada —<code class="en-linea">Processes</code>, <code class="en-linea">DecisionModels</code> y el endpoint REST autogenerado— y, a partir de ahí, todo es <code class="en-linea">assertThat</code>, <code class="en-linea">when</code> y <code class="en-linea">verify</code> de toda la vida.</p>
+      </div>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Cierre</div>
+        <p>Con esta red de seguridad en las tres alturas, el siguiente cambio de reglas que pida el área de riesgo dejará de dar miedo: corres la suite, ves en verde lo que sigue funcionando y en rojo lo que tu cambio tocó. En el <strong>Tema&nbsp;12</strong> armarás el capstone completo de aprobación de crédito — y estas pruebas serán las que te digan que quedó bien.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="10-persistencia-cloud-native.html"><div class="dir">← Anterior</div><div class="tit">Persistencia y cloud-native</div></a>
+    <a href="12-capstone-aprobacion-credito.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">Capstone: aprobación de crédito</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot · Java 21</span>
+  </footer>
+
+</body>
+</html>

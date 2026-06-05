@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Proceso BPMN ejecutable: Aprobación de Crédito (Kogito 10.2.0 / Spring Boot / Java 21).
+
+  Flujo:
+    Inicio
+      -> Script Task "Evaluar score" (calcula score y decisión a partir de la solicitud,
+         con la MISMA lógica modelada en scoringCredito.dmn)
+      -> Gateway exclusivo sobre evaluacion.decision:
+           "REVISION"  -> User Task "Revisión del analista" (grupo: analistas) -> Fin
+           "APROBADO"  -> Fin (aprobado)
+           default     -> Fin (rechazado)
+
+  Nota sobre el scoring:
+    - La decisión está modelada ADEMÁS como DMN (scoringCredito.dmn) y probada de forma
+      aislada en ScoringDmnTest. En un despliegue productivo, "Evaluar score" sería una
+      Business Rule Task que invoca ese DMN; aquí se calcula dentro del proceso (Script
+      Task) para que el ejemplo corra sin configuración adicional y de forma determinista.
+-->
+<bpmn2:definitions
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:drools="http://www.jboss.org/drools"
+    xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd"
+    id="_aprobacionCredito_Definitions"
+    exporter="Apache KIE / Kogito"
+    exporterVersion="10.2.0"
+    expressionLanguage="http://www.omg.org/spec/FEEL/20140401"
+    typeLanguage="http://www.java.com/javaTypes"
+    targetNamespace="http://www.omg.org/bpmn20">
+
+  <!-- ============================================================= -->
+  <!-- Item definitions (tipos Java de las variables del proceso)    -->
+  <!-- ============================================================= -->
+  <bpmn2:itemDefinition id="_solicitudItem"
+      structureRef="com.academy.kogito.model.SolicitudCredito"/>
+  <bpmn2:itemDefinition id="_evaluacionItem"
+      structureRef="com.academy.kogito.model.Evaluacion"/>
+
+  <!-- ============================================================= -->
+  <!-- Proceso ejecutable                                            -->
+  <!-- ============================================================= -->
+  <bpmn2:process id="aprobacionCredito" name="Aprobación de Crédito"
+      isExecutable="true" processType="Public"
+      drools:packageName="com.academy.kogito"
+      drools:version="1.0.0"
+      drools:adHoc="false">
+
+    <!-- Metadatos de paquete (package del proceso) -->
+    <bpmn2:extensionElements>
+      <drools:metaData name="elementname">
+        <drools:metaValue>Aprobación de Crédito</drools:metaValue>
+      </drools:metaData>
+    </bpmn2:extensionElements>
+
+    <!-- Variables del proceso (properties) -->
+    <!-- ENTRADA: solicitud (expuesta como input del endpoint REST) -->
+    <bpmn2:property id="solicitud" itemSubjectRef="_solicitudItem" name="solicitud">
+      <bpmn2:extensionElements>
+        <drools:metaData name="customTags">
+          <drools:metaValue>input</drools:metaValue>
+        </drools:metaData>
+      </bpmn2:extensionElements>
+    </bpmn2:property>
+    <!-- SALIDA: evaluacion (expuesta como output del endpoint REST) -->
+    <bpmn2:property id="evaluacion" itemSubjectRef="_evaluacionItem" name="evaluacion">
+      <bpmn2:extensionElements>
+        <drools:metaData name="customTags">
+          <drools:metaValue>output</drools:metaValue>
+        </drools:metaData>
+      </bpmn2:extensionElements>
+    </bpmn2:property>
+
+    <!-- ===================== Nodos ===================== -->
+
+    <!-- Inicio -->
+    <bpmn2:startEvent id="_startEvent" name="Inicio">
+      <bpmn2:outgoing>_flowStartToRule</bpmn2:outgoing>
+    </bpmn2:startEvent>
+
+    <!-- Script Task: calcula score y decisión a partir de la solicitud.
+         Reproduce en Java la MISMA lógica modelada en scoringCredito.dmn (ver ScoringDmnTest).
+         En producción esta tarea sería una Business Rule Task que invoca el DMN; aquí se
+         calcula dentro del proceso para una ejecución sin dependencias externas. -->
+    <bpmn2:scriptTask id="_ruleEvaluarScore" name="Evaluar score"
+        scriptFormat="http://www.java.com/java">
+      <bpmn2:extensionElements>
+        <drools:metaData name="elementname">
+          <drools:metaValue>Evaluar score</drools:metaValue>
+        </drools:metaData>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>_flowStartToRule</bpmn2:incoming>
+      <bpmn2:outgoing>_flowRuleToGateway</bpmn2:outgoing>
+      <bpmn2:script><![CDATA[
+com.academy.kogito.model.SolicitudCredito s = solicitud;
+
+// Puntos por nivel de ingresos
+int puntosIngresos =
+        s.getIngresosMensuales() >= 50000 ? 40 :
+        s.getIngresosMensuales() >= 30000 ? 30 :
+        s.getIngresosMensuales() >= 15000 ? 20 :
+        s.getIngresosMensuales() >= 8000  ? 10 : 0;
+
+// Relación monto/ingresos (menor es mejor)
+double ratioMonto = s.getIngresosMensuales() > 0
+        ? s.getMontoSolicitado() / s.getIngresosMensuales()
+        : 999.0;
+int puntosRatio =
+        ratioMonto <= 3  ? 35 :
+        ratioMonto <= 6  ? 25 :
+        ratioMonto <= 12 ? 15 :
+        ratioMonto <= 20 ? 5  : 0;
+
+// Edad en rango premiado y ausencia de mora
+int puntosEdad = (s.getEdad() >= 25 && s.getEdad() <= 65) ? 15 : 0;
+int puntosMora = s.isTieneMora() ? 0 : 10;
+
+int score = puntosIngresos + puntosRatio + puntosEdad + puntosMora;
+
+String decision = score >= 70 ? "APROBADO" : score >= 50 ? "REVISION" : "RECHAZADO";
+
+String motivo;
+if (s.isTieneMora()) {
+    motivo = "Solicitante con mora registrada; score=" + score;
+} else if (score >= 70) {
+    motivo = "Perfil solido: ingresos suficientes y bajo endeudamiento; score=" + score;
+} else if (score >= 50) {
+    motivo = "Perfil intermedio: requiere revision manual del analista; score=" + score;
+} else {
+    motivo = "Perfil de alto riesgo: ingresos insuficientes o monto elevado; score=" + score;
+}
+
+com.academy.kogito.model.Evaluacion e = new com.academy.kogito.model.Evaluacion();
+e.setScore(score);
+e.setDecision(decision);
+e.setMotivo(motivo);
+
+kcontext.setVariable("evaluacion", e);
+]]></bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- Gateway exclusivo sobre evaluacion.decision -->
+    <bpmn2:exclusiveGateway id="_gatewayDecision" name="¿Decisión?"
+        gatewayDirection="Diverging" default="_flowGatewayToRechazado">
+      <bpmn2:incoming>_flowRuleToGateway</bpmn2:incoming>
+      <bpmn2:outgoing>_flowGatewayToRevision</bpmn2:outgoing>
+      <bpmn2:outgoing>_flowGatewayToAprobado</bpmn2:outgoing>
+      <bpmn2:outgoing>_flowGatewayToRechazado</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- User Task: Revisión del analista (grupo: analistas) -->
+    <bpmn2:userTask id="_userRevisionAnalista" name="Revisión del analista">
+      <bpmn2:extensionElements>
+        <drools:metaData name="elementname">
+          <drools:metaValue>Revisión del analista</drools:metaValue>
+        </drools:metaData>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>_flowGatewayToRevision</bpmn2:incoming>
+      <bpmn2:outgoing>_flowRevisionToFin</bpmn2:outgoing>
+
+      <bpmn2:ioSpecification>
+        <bpmn2:dataInput id="_userRevision_taskNameInput"
+            drools:dtype="Object" name="TaskName"/>
+        <bpmn2:dataInput id="_userRevision_skippableInput"
+            drools:dtype="Object" name="Skippable"/>
+        <bpmn2:dataInput id="_userRevision_groupIdInput"
+            drools:dtype="Object" name="GroupId"/>
+        <bpmn2:dataInput id="_userRevision_solicitudInput"
+            drools:dtype="com.academy.kogito.model.SolicitudCredito"
+            itemSubjectRef="_solicitudItem" name="solicitud"/>
+        <bpmn2:dataInput id="_userRevision_evaluacionInput"
+            drools:dtype="com.academy.kogito.model.Evaluacion"
+            itemSubjectRef="_evaluacionItem" name="evaluacion"/>
+        <bpmn2:inputSet>
+          <bpmn2:dataInputRefs>_userRevision_taskNameInput</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>_userRevision_skippableInput</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>_userRevision_groupIdInput</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>_userRevision_solicitudInput</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>_userRevision_evaluacionInput</bpmn2:dataInputRefs>
+        </bpmn2:inputSet>
+        <bpmn2:outputSet/>
+      </bpmn2:ioSpecification>
+
+      <!-- TaskName -->
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>_userRevision_taskNameInput</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">RevisionAnalista</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">_userRevision_taskNameInput</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <!-- Skippable = false -->
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>_userRevision_skippableInput</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">false</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">_userRevision_skippableInput</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <!-- GroupId = analistas -->
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>_userRevision_groupIdInput</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">analistas</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">_userRevision_groupIdInput</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <!-- Entradas de negocio para el analista -->
+      <bpmn2:dataInputAssociation>
+        <bpmn2:sourceRef>solicitud</bpmn2:sourceRef>
+        <bpmn2:targetRef>_userRevision_solicitudInput</bpmn2:targetRef>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:sourceRef>evaluacion</bpmn2:sourceRef>
+        <bpmn2:targetRef>_userRevision_evaluacionInput</bpmn2:targetRef>
+      </bpmn2:dataInputAssociation>
+
+      <!-- Grupo potencial owner: analistas -->
+      <bpmn2:potentialOwner>
+        <bpmn2:resourceAssignmentExpression>
+          <bpmn2:formalExpression>analistas</bpmn2:formalExpression>
+        </bpmn2:resourceAssignmentExpression>
+      </bpmn2:potentialOwner>
+    </bpmn2:userTask>
+
+    <!-- Fines -->
+    <bpmn2:endEvent id="_endRevision" name="Fin revisión">
+      <bpmn2:incoming>_flowRevisionToFin</bpmn2:incoming>
+    </bpmn2:endEvent>
+    <bpmn2:endEvent id="_endAprobado" name="Aprobado">
+      <bpmn2:incoming>_flowGatewayToAprobado</bpmn2:incoming>
+    </bpmn2:endEvent>
+    <bpmn2:endEvent id="_endRechazado" name="Rechazado">
+      <bpmn2:incoming>_flowGatewayToRechazado</bpmn2:incoming>
+    </bpmn2:endEvent>
+
+    <!-- ===================== Flujos de secuencia ===================== -->
+
+    <bpmn2:sequenceFlow id="_flowStartToRule"
+        sourceRef="_startEvent" targetRef="_ruleEvaluarScore"/>
+
+    <bpmn2:sequenceFlow id="_flowRuleToGateway"
+        sourceRef="_ruleEvaluarScore" targetRef="_gatewayDecision"/>
+
+    <!-- REVISION -> User Task -->
+    <bpmn2:sequenceFlow id="_flowGatewayToRevision" name="REVISION"
+        sourceRef="_gatewayDecision" targetRef="_userRevisionAnalista">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression"
+          language="http://www.java.com/java">return "REVISION".equals(evaluacion.getDecision());</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+
+    <!-- APROBADO -> Fin aprobado -->
+    <bpmn2:sequenceFlow id="_flowGatewayToAprobado" name="APROBADO"
+        sourceRef="_gatewayDecision" targetRef="_endAprobado">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression"
+          language="http://www.java.com/java">return "APROBADO".equals(evaluacion.getDecision());</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+
+    <!-- default (RECHAZADO) -> Fin rechazado -->
+    <bpmn2:sequenceFlow id="_flowGatewayToRechazado" name="RECHAZADO"
+        sourceRef="_gatewayDecision" targetRef="_endRechazado"/>
+
+    <bpmn2:sequenceFlow id="_flowRevisionToFin"
+        sourceRef="_userRevisionAnalista" targetRef="_endRevision"/>
+
+  </bpmn2:process>
+
+  <!-- ============================================================= -->
+  <!-- Diagrama (BPMNDI) - layout para visualización                 -->
+  <!-- ============================================================= -->
+  <bpmndi:BPMNDiagram id="_diagram">
+    <bpmndi:BPMNPlane id="_plane" bpmnElement="aprobacionCredito">
+
+      <bpmndi:BPMNShape id="_shape_startEvent" bpmnElement="_startEvent">
+        <dc:Bounds x="100" y="200" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_shape_ruleEvaluarScore" bpmnElement="_ruleEvaluarScore">
+        <dc:Bounds x="200" y="178" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_shape_gatewayDecision" bpmnElement="_gatewayDecision">
+        <dc:Bounds x="390" y="198" width="40" height="40"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_shape_userRevisionAnalista" bpmnElement="_userRevisionAnalista">
+        <dc:Bounds x="500" y="80" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_shape_endRevision" bpmnElement="_endRevision">
+        <dc:Bounds x="700" y="102" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_shape_endAprobado" bpmnElement="_endAprobado">
+        <dc:Bounds x="500" y="200" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_shape_endRechazado" bpmnElement="_endRechazado">
+        <dc:Bounds x="500" y="300" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="_edge_flowStartToRule" bpmnElement="_flowStartToRule">
+        <di:waypoint x="136" y="218"/>
+        <di:waypoint x="200" y="218"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="_edge_flowRuleToGateway" bpmnElement="_flowRuleToGateway">
+        <di:waypoint x="320" y="218"/>
+        <di:waypoint x="390" y="218"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="_edge_flowGatewayToRevision" bpmnElement="_flowGatewayToRevision">
+        <di:waypoint x="410" y="198"/>
+        <di:waypoint x="410" y="120"/>
+        <di:waypoint x="500" y="120"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="_edge_flowGatewayToAprobado" bpmnElement="_flowGatewayToAprobado">
+        <di:waypoint x="430" y="218"/>
+        <di:waypoint x="500" y="218"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="_edge_flowGatewayToRechazado" bpmnElement="_flowGatewayToRechazado">
+        <di:waypoint x="410" y="238"/>
+        <di:waypoint x="410" y="318"/>
+        <di:waypoint x="500" y="318"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="_edge_flowRevisionToFin" bpmnElement="_flowRevisionToFin">
+        <di:waypoint x="620" y="120"/>
+        <di:waypoint x="700" y="120"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn2:definitions>

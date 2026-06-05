@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!-- ============================================================
+     PLANTILLA CANÓNICA — copia esta estructura EXACTA para cada página.
+     Reglas:
+       · Idioma: español. Tono didáctico, cercano, para alumnos que vienen de Spring.
+       · Enlaza SIEMPRE ../assets/estilos.css (las páginas viven en /paginas).
+       · Usa las clases del sistema de diseño; NO inventes estilos inline salvo en SVG.
+       · NUNCA menciones IA, asistentes ni herramientas de generación.
+       · Cada página termina con .nav-serie (anterior/siguiente) y .pie-pagina.
+       · Los diagramas son SVG EN LÍNEA (no <img>), usando las clases svg-* y el marcador #flecha.
+     ============================================================ -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NN · Título de la página — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior (idéntica en todas las páginas) -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="ANTERIOR.html" class="oculta-movil">← Anterior</a>
+    <a href="SIGUIENTE.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Tema NN</span>
+    <h1>Título de la página</h1>
+    <p class="bajada">Una frase que resume qué aprenderá el alumno y por qué importa.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <section class="seccion">
+      <h2>Encabezado de sección</h2>
+      <p>Texto explicativo. Usa <code class="en-linea">código en línea</code> cuando cites clases o anotaciones.</p>
+
+      <!-- Puente con lo que ya saben (úsalo al menos una vez por página cuando aplique) -->
+      <div class="puente">
+        <p>En Spring esto lo hacías con <code class="en-linea">@RestController</code>… en Kogito el endpoint se autogenera a partir del proceso.</p>
+      </div>
+    </section>
+
+    <!-- Ejemplo de diagrama SVG en línea con marcador de flecha reutilizable -->
+    <figure class="diagrama">
+      <svg viewBox="0 0 520 120" role="img" aria-label="Descripción accesible del diagrama">
+        <defs>
+          <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+          </marker>
+        </defs>
+        <circle cx="50" cy="60" r="22" class="svg-borde svg-relleno"></circle>
+        <rect x="150" y="38" width="150" height="44" rx="10" class="svg-borde svg-relleno"></rect>
+        <text x="225" y="64" text-anchor="middle" class="svg-texto-b">Tarea</text>
+        <circle cx="450" cy="60" r="22" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></circle>
+        <line x1="72" y1="60" x2="150" y2="60" class="svg-flecha"></line>
+        <line x1="300" y1="60" x2="428" y2="60" class="svg-flecha"></line>
+      </svg>
+      <figcaption>Pie del diagrama que explica qué representa.</figcaption>
+    </figure>
+
+    <section class="seccion">
+      <h3>Avisos disponibles</h3>
+      <div class="aviso"><div class="titulo">ℹ️ Nota</div><p>Información de contexto.</p></div>
+      <div class="aviso tip"><div class="titulo">✅ Tip</div><p>Buena práctica.</p></div>
+      <div class="aviso ojo"><div class="titulo">⚠️ Ojo</div><p>Algo a tener cuidado.</p></div>
+      <div class="aviso alto"><div class="titulo">⛔ Importante</div><p>Error común a evitar.</p></div>
+    </section>
+
+    <!-- Ejemplo de bloque de código -->
+    <div class="codigo">
+      <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">Ejemplo.java</span></div>
+      <pre><code><span class="anot">@RestController</span>
+<span class="kw">public class</span> <span class="typ">Ejemplo</span> { <span class="cmt">// comentario</span> }</code></pre>
+    </div>
+
+    <!-- Ejemplo de tabla -->
+    <table class="tabla">
+      <thead><tr><th>Concepto</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><code>Algo</code></td><td>Su explicación.</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="ANTERIOR.html"><div class="dir">← Anterior</div><div class="tit">Título anterior</div></a>
+    <a href="SIGUIENTE.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">Título siguiente</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot</span>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tema 04 · Tu primer proceso y su API REST — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="03-bpmn-alfabeto.html" class="oculta-movil">← Anterior</a>
+    <a href="05-variables-datos.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Tema 04</span>
+    <h1>Tu primer proceso y su API REST</h1>
+    <p class="bajada">Dibujas un proceso de tres piezas, le pones un identificador… y Kogito te entrega, gratis, una API REST completa, versionada por proceso y lista para invocarse con <code class="en-linea">curl</code>.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Anatomía de un archivo <code class="en-linea">.bpmn2</code></h2>
+      <p>
+        Un proceso de negocio en Kogito vive en un archivo con extensión <code class="en-linea">.bpmn2</code> (o
+        <code class="en-linea">.bpmn</code>). Por dentro es <strong>XML</strong> conforme al estándar BPMN&nbsp;2.0, pero
+        casi nunca lo escribes a mano: lo <strong>editas visualmente</strong> arrastrando figuras en el editor de procesos
+        (el plugin de VS Code o el canvas de Kogito). El editor pinta el diagrama y, en paralelo, mantiene el XML sincronizado.
+      </p>
+      <p>
+        Ese archivo se coloca junto al código, normalmente en
+        <code class="en-linea">src/main/resources/</code>. Cuando compilas con Maven, el procesador de Kogito lo lee
+        <strong>en tiempo de compilación</strong> y genera el código Java —incluida la capa REST— que terminará dentro de tu
+        binario de Spring Boot.
+      </p>
+
+      <div class="puente">
+        <p>
+          Piensa en el <code class="en-linea">.bpmn2</code> como tu <code class="en-linea">schema.sql</code> o una entidad
+          <code class="en-linea">@Entity</code> de JPA: un recurso declarativo que vive en <code class="en-linea">resources</code>
+          y del que, al compilar, nace código real. Tú describes el <em>qué</em>; el generador produce el <em>cómo</em>.
+        </p>
+      </div>
+
+      <h3>La pieza clave: el <code class="en-linea">processId</code></h3>
+      <p>
+        Dentro del XML, el elemento <code class="en-linea">&lt;process&gt;</code> lleva un atributo <code class="en-linea">id</code>:
+        el <strong>processId</strong>. Es el nombre técnico, único, del proceso. Recuérdalo bien porque marcará toda la lección:
+      </p>
+      <ul>
+        <li>Identifica al proceso de forma única dentro de la aplicación.</li>
+        <li>Se convierte literalmente en la <strong>ruta REST</strong> que Kogito autogenera: <code class="en-linea">/{processId}</code>.</li>
+        <li>Aparece en los eventos, las métricas y las consultas del Data Index.</li>
+      </ul>
+
+      <div class="aviso ojo">
+        <div class="titulo">⚠️ Ojo</div>
+        <p>
+          No confundas tres nombres distintos: el <strong>nombre del archivo</strong> (<code class="en-linea">saludo.bpmn2</code>),
+          el <strong><code class="en-linea">id</code> del proceso</strong> (el <code class="en-linea">processId</code>, que será la ruta)
+          y el <strong><code class="en-linea">name</code></strong> (etiqueta legible para humanos). La ruta sale del <code class="en-linea">id</code>,
+          no del nombre del archivo. Usa identificadores sin espacios ni acentos: <code class="en-linea">saludo</code>, no <code class="en-linea">Mi Saludo</code>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Un proceso mínimo: <code class="en-linea">saludo</code></h2>
+      <p>
+        El proceso más pequeño que vale la pena ejecutar tiene tres elementos: un <strong>evento de inicio</strong>, una
+        <strong>tarea</strong> y un <strong>evento de fin</strong>, unidos por flujos de secuencia. Vamos a llamarlo
+        <code class="en-linea">saludo</code>: recibe un nombre, arma un mensaje de bienvenida y termina.
+      </p>
+
+      <div class="chips">
+        <span class="chip bpmn-evento">
+          <span class="ico"><svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#eefaf2" stroke="#1f9d55" stroke-width="2"></circle></svg></span>
+          Evento de inicio
+        </span>
+        <span class="chip bpmn-tarea">
+          <span class="ico"><svg viewBox="0 0 18 18"><rect x="2" y="4" width="14" height="10" rx="3" fill="#eef3f9" stroke="#004481" stroke-width="2"></rect></svg></span>
+          Tarea (script)
+        </span>
+        <span class="chip bpmn-evento">
+          <span class="ico"><svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#fdeeee" stroke="#d64545" stroke-width="2.6"></circle></svg></span>
+          Evento de fin
+        </span>
+        <span class="chip bpmn-flujo">
+          <span class="ico"><svg viewBox="0 0 18 18"><line x1="2" y1="9" x2="14" y2="9" stroke="#495567" stroke-width="2"></line><path d="M12,5 L16,9 L12,13 Z" fill="#495567"></path></svg></span>
+          Flujo de secuencia
+        </span>
+      </div>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 640 150" role="img" aria-label="Proceso saludo: evento de inicio, tarea Construir saludo y evento de fin, enlazados por flujos de secuencia">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Evento de inicio -->
+          <circle cx="60" cy="75" r="26" fill="#eefaf2" stroke="#1f9d55" stroke-width="2.5"></circle>
+          <text x="60" y="124" text-anchor="middle" class="svg-texto">Inicio</text>
+
+          <!-- Tarea -->
+          <rect x="210" y="47" width="220" height="56" rx="12" class="svg-borde svg-relleno"></rect>
+          <text x="320" y="71" text-anchor="middle" class="svg-texto-b">Construir saludo</text>
+          <text x="320" y="90" text-anchor="middle" class="svg-texto" font-size="12">tarea de script</text>
+
+          <!-- Evento de fin -->
+          <circle cx="580" cy="75" r="26" fill="#fdeeee" stroke="#d64545" stroke-width="3.5"></circle>
+          <text x="580" y="124" text-anchor="middle" class="svg-texto">Fin</text>
+
+          <!-- Flujos -->
+          <line x1="88" y1="75" x2="208" y2="75" class="svg-flecha"></line>
+          <line x1="432" y1="75" x2="552" y2="75" class="svg-flecha"></line>
+        </svg>
+        <figcaption>Proceso <code>saludo</code>: <strong>Inicio → Construir saludo → Fin</strong>. Su <code>processId</code> es <code>saludo</code>, así que la ruta REST será <code>/saludo</code>.</figcaption>
+      </figure>
+
+      <p>
+        Así se ve el corazón del XML que el editor mantiene por ti. No necesitas memorizarlo —fíjate solo en el
+        <code class="en-linea">id="saludo"</code> del <code class="en-linea">&lt;process&gt;</code>:
+      </p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">src/main/resources/saludo.bpmn2</span></div>
+        <pre><code><span class="cmt">&lt;!-- Fragmento ilustrativo y recortado: el editor visual genera el resto --&gt;</span>
+<span class="kw">&lt;process</span> <span class="anot">id</span>=<span class="str">"saludo"</span> <span class="anot">name</span>=<span class="str">"Saludo de bienvenida"</span>
+         <span class="anot">processType</span>=<span class="str">"Public"</span> <span class="anot">isExecutable</span>=<span class="str">"true"</span><span class="kw">&gt;</span>
+
+  <span class="cmt">&lt;!-- Variable de proceso: el contrato de datos del endpoint --&gt;</span>
+  <span class="kw">&lt;property</span> <span class="anot">id</span>=<span class="str">"nombre"</span>  <span class="anot">itemSubjectRef</span>=<span class="str">"_nombreItem"</span><span class="kw">/&gt;</span>
+  <span class="kw">&lt;property</span> <span class="anot">id</span>=<span class="str">"saludo"</span>  <span class="anot">itemSubjectRef</span>=<span class="str">"_saludoItem"</span><span class="kw">/&gt;</span>
+
+  <span class="kw">&lt;startEvent</span>   <span class="anot">id</span>=<span class="str">"_start"</span> <span class="anot">name</span>=<span class="str">"Inicio"</span><span class="kw">/&gt;</span>
+
+  <span class="kw">&lt;scriptTask</span>  <span class="anot">id</span>=<span class="str">"_saludar"</span> <span class="anot">name</span>=<span class="str">"Construir saludo"</span><span class="kw">&gt;</span>
+    <span class="kw">&lt;script&gt;</span>kcontext.setVariable(<span class="str">"saludo"</span>,
+        <span class="str">"¡Hola, "</span> + nombre + <span class="str">"! Bienvenido a Kogito."</span>);<span class="kw">&lt;/script&gt;</span>
+  <span class="kw">&lt;/scriptTask&gt;</span>
+
+  <span class="kw">&lt;endEvent</span>     <span class="anot">id</span>=<span class="str">"_end"</span> <span class="anot">name</span>=<span class="str">"Fin"</span><span class="kw">/&gt;</span>
+
+  <span class="cmt">&lt;!-- Flujos de secuencia que conectan los nodos --&gt;</span>
+  <span class="kw">&lt;sequenceFlow</span> <span class="anot">sourceRef</span>=<span class="str">"_start"</span>   <span class="anot">targetRef</span>=<span class="str">"_saludar"</span><span class="kw">/&gt;</span>
+  <span class="kw">&lt;sequenceFlow</span> <span class="anot">sourceRef</span>=<span class="str">"_saludar"</span> <span class="anot">targetRef</span>=<span class="str">"_end"</span><span class="kw">/&gt;</span>
+<span class="kw">&lt;/process&gt;</span></code></pre>
+      </div>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>
+          Las dos <code class="en-linea">&lt;property&gt;</code> —<code class="en-linea">nombre</code> y <code class="en-linea">saludo</code>—
+          son <strong>variables del proceso</strong>. Aquí está la magia: esas variables forman el <strong>contrato JSON</strong> de tu API.
+          Lo que mandas al arrancar (<code class="en-linea">nombre</code>) y lo que recibes de vuelta (<code class="en-linea">saludo</code>)
+          salen directamente de ellas. Profundizaremos en variables y tipos en el próximo tema.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>De <code class="en-linea">processId</code> a API REST, sin escribir un controlador</h2>
+      <p>
+        Aquí viene lo que distingue a Kogito. En cuanto el proyecto compila, el generador toma tu proceso <code class="en-linea">saludo</code>
+        y produce un conjunto de endpoints REST <strong>específicos de ese proceso</strong>. No hay un <code class="en-linea">@RestController</code>
+        en tu código: el controlador se genera y se compila dentro del binario. La ruta base es el <code class="en-linea">processId</code>:
+        <code class="en-linea">/saludo</code>.
+      </p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 660 260" role="img" aria-label="El processId saludo se transforma en cuatro operaciones REST: POST, GET lista, GET por id y DELETE">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Origen: el proceso -->
+          <rect x="24" y="100" width="170" height="60" rx="12" class="svg-borde svg-relleno"></rect>
+          <text x="109" y="125" text-anchor="middle" class="svg-texto-b">proceso</text>
+          <text x="109" y="146" text-anchor="middle" class="svg-texto" font-size="13">id = "saludo"</text>
+
+          <!-- Caja "API autogenerada" -->
+          <rect x="300" y="20" width="336" height="220" rx="14" fill="#ffffff" stroke="#1464a5" stroke-width="1.5" stroke-dasharray="6 5"></rect>
+          <text x="468" y="44" text-anchor="middle" class="svg-texto-b" font-size="13">API REST autogenerada · /saludo</text>
+
+          <!-- POST -->
+          <rect x="320" y="58" width="296" height="36" rx="8" fill="#e3f7ec" stroke="#1f9d55" stroke-width="1.5"></rect>
+          <text x="334" y="81" class="svg-texto-b" font-size="13" fill="#1f9d55">POST</text>
+          <text x="392" y="81" class="svg-texto" font-size="13">/saludo</text>
+
+          <!-- GET lista -->
+          <rect x="320" y="100" width="296" height="36" rx="8" fill="#e3f0fb" stroke="#1464a5" stroke-width="1.5"></rect>
+          <text x="334" y="123" class="svg-texto-b" font-size="13" fill="#1464a5">GET</text>
+          <text x="392" y="123" class="svg-texto" font-size="13">/saludo</text>
+
+          <!-- GET por id -->
+          <rect x="320" y="142" width="296" height="36" rx="8" fill="#e3f0fb" stroke="#1464a5" stroke-width="1.5"></rect>
+          <text x="334" y="165" class="svg-texto-b" font-size="13" fill="#1464a5">GET</text>
+          <text x="392" y="165" class="svg-texto" font-size="13">/saludo/{id}</text>
+
+          <!-- DELETE -->
+          <rect x="320" y="184" width="296" height="36" rx="8" fill="#fde6e6" stroke="#d64545" stroke-width="1.5"></rect>
+          <text x="334" y="207" class="svg-texto-b" font-size="13" fill="#d64545">DELETE</text>
+          <text x="392" y="207" class="svg-texto" font-size="13">/saludo/{id}</text>
+
+          <!-- Flecha de transformación -->
+          <line x1="196" y1="130" x2="298" y2="130" class="svg-flecha"></line>
+          <text x="247" y="120" text-anchor="middle" class="svg-texto" font-size="12" fill="#028484">compila</text>
+        </svg>
+        <figcaption>El <code>processId</code> es la raíz de la ruta. De un solo proceso nacen las operaciones de crear, listar, consultar y abortar instancias.</figcaption>
+      </figure>
+
+      <p>Cada endpoint opera sobre <strong>instancias</strong> del proceso. Una instancia es una ejecución concreta —como una fila en una tabla— y se identifica con un <code class="en-linea">id</code> que Kogito genera (un UUID):</p>
+
+      <ul>
+        <li><strong><code class="en-linea">POST /saludo</code></strong> — arranca una nueva instancia. Le envías los datos de entrada en el cuerpo JSON y te devuelve el <code class="en-linea">id</code> de la instancia recién creada junto con sus variables.</li>
+        <li><strong><code class="en-linea">GET /saludo</code></strong> — lista las instancias activas de ese proceso.</li>
+        <li><strong><code class="en-linea">GET /saludo/{id}</code></strong> — consulta una instancia concreta por su <code class="en-linea">id</code>.</li>
+        <li><strong><code class="en-linea">DELETE /saludo/{id}</code></strong> — aborta (cancela) esa instancia.</li>
+      </ul>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota</div>
+        <p>
+          Nuestro proceso <code class="en-linea">saludo</code> es <em>directo</em>: arranca y termina en el mismo
+          <code class="en-linea">POST</code> porque no tiene esperas (ni tareas humanas ni temporizadores). Por eso, al crearlo,
+          ya recibes el resultado calculado. En procesos que se quedan a la espera, la instancia sigue viva y la consultas
+          después con <code class="en-linea">GET /saludo/{id}</code>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Conexión con el Módulo 6: verbos y códigos de estado</h2>
+      <p>
+        Todo lo que aprendiste sobre HTTP aplica tal cual. Kogito respeta la semántica REST: el <strong>verbo</strong> indica la
+        intención y el <strong>código de respuesta</strong> indica el resultado. Esta es la tabla de endpoints autogenerados para
+        <code class="en-linea">saludo</code>:
+      </p>
+
+      <table class="tabla">
+        <thead>
+          <tr><th>Verbo</th><th>Ruta</th><th>Qué hace</th><th>Código típico</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pildora verde">POST</span></td>
+            <td><code>/saludo</code></td>
+            <td>Crea (arranca) una instancia del proceso con los datos de entrada</td>
+            <td><code>201 Created</code></td>
+          </tr>
+          <tr>
+            <td><span class="pildora azul">GET</span></td>
+            <td><code>/saludo</code></td>
+            <td>Lista las instancias activas</td>
+            <td><code>200 OK</code></td>
+          </tr>
+          <tr>
+            <td><span class="pildora azul">GET</span></td>
+            <td><code>/saludo/{id}</code></td>
+            <td>Consulta una instancia concreta</td>
+            <td><code>200 OK</code> · <code>404 Not Found</code></td>
+          </tr>
+          <tr>
+            <td><span class="pildora rojo">DELETE</span></td>
+            <td><code>/saludo/{id}</code></td>
+            <td>Aborta (cancela) la instancia</td>
+            <td><code>200 OK</code> · <code>404 Not Found</code></td>
+          </tr>
+          <tr>
+            <td><span class="pildora ambar">cualquiera</span></td>
+            <td><code>/saludo…</code></td>
+            <td>Cuerpo mal formado o validación fallida</td>
+            <td><code>400 Bad Request</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="puente">
+        <p>
+          Es exactamente el contrato REST del Módulo 6: <code class="en-linea">POST</code> que crea responde
+          <code class="en-linea">201 Created</code> (a menudo con cabecera <code class="en-linea">Location</code> apuntando a la
+          nueva instancia); <code class="en-linea">GET</code> que encuentra responde <code class="en-linea">200 OK</code>; pedir un
+          <code class="en-linea">id</code> inexistente da <code class="en-linea">404 Not Found</code>; y un cuerpo inválido da
+          <code class="en-linea">400 Bad Request</code>. Lo que cambia es que <strong>no escribiste el controlador</strong>: lo
+          generó el proceso.
+        </p>
+      </div>
+
+      <div class="aviso ojo">
+        <div class="titulo">⚠️ Ojo</div>
+        <p>
+          Verás documentación que muestra <code class="en-linea">POST</code> respondiendo <code class="en-linea">200 OK</code> en
+          lugar de <code class="en-linea">201 Created</code> según la versión y la configuración. La semántica del Módulo 6 es la guía:
+          una creación exitosa <em>debería</em> ser <code class="en-linea">201</code>. No te ancles al número exacto: razona por la
+          intención del verbo.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Manos a la obra: invócalo con <code class="en-linea">curl</code></h2>
+      <p>
+        Con la aplicación corriendo (<code class="en-linea">mvn spring-boot:run</code>, por defecto en el puerto
+        <code class="en-linea">8080</code>), arrancar una instancia es un simple <code class="en-linea">POST</code>. El cuerpo JSON lleva
+        las variables de entrada del proceso —en nuestro caso, <code class="en-linea">nombre</code>:
+      </p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">terminal · arrancar una instancia</span></div>
+        <pre><code><span class="cmt"># POST a /saludo con la variable de entrada en el cuerpo</span>
+curl -i -X POST <span class="str">http://localhost:8080/saludo</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{ "nombre": "Ana" }'</span></code></pre>
+      </div>
+
+      <p>La respuesta trae el <strong><code class="en-linea">id</code> de la instancia</strong> y el estado completo de sus variables, incluido el <code class="en-linea">saludo</code> ya calculado:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">respuesta HTTP</span></div>
+        <pre><code><span class="kw">HTTP/1.1</span> <span class="typ">201 Created</span>
+<span class="anot">Location</span>: /saludo/2f4a1c9e-7b3d-4a16-9f0e-8c2d11ab77e1
+<span class="anot">Content-Type</span>: application/json
+
+{
+  <span class="anot">"id"</span>: <span class="str">"2f4a1c9e-7b3d-4a16-9f0e-8c2d11ab77e1"</span>,
+  <span class="anot">"nombre"</span>: <span class="str">"Ana"</span>,
+  <span class="anot">"saludo"</span>: <span class="str">"¡Hola, Ana! Bienvenido a Kogito."</span>
+}</code></pre>
+      </div>
+
+      <p>Ese <code class="en-linea">id</code> es la llave para el resto de operaciones. Consulta o aborta la instancia con él:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">terminal · consultar y abortar</span></div>
+        <pre><code><span class="cmt"># Listar instancias activas</span>
+curl <span class="str">http://localhost:8080/saludo</span>
+
+<span class="cmt"># Consultar una instancia por su id</span>
+curl <span class="str">http://localhost:8080/saludo/2f4a1c9e-7b3d-4a16-9f0e-8c2d11ab77e1</span>
+
+<span class="cmt"># Abortar (cancelar) esa instancia</span>
+curl -X DELETE <span class="str">http://localhost:8080/saludo/2f4a1c9e-7b3d-4a16-9f0e-8c2d11ab77e1</span></code></pre>
+      </div>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>
+          Como todo endpoint REST autogenerado expone su contrato, Kogito también publica un <strong>OpenAPI</strong> en
+          <code class="en-linea">/q/openapi</code> y un Swagger UI para explorar y probar las rutas desde el navegador. Tus pruebas con
+          <code class="en-linea">MockMvc</code> o <code class="en-linea">RestAssured</code> de JUnit funcionan igual que contra
+          cualquier controlador de Spring Boot.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>El ciclo completo, de un vistazo</h2>
+      <p>Recapitulando el camino desde el archivo hasta la llamada REST:</p>
+
+      <ol class="pasos">
+        <li>Dibujas <strong>Inicio → Tarea → Fin</strong> en el editor visual; se guarda como <code class="en-linea">saludo.bpmn2</code> en <code class="en-linea">resources</code>.</li>
+        <li>Le das al proceso un <strong><code class="en-linea">processId</code></strong>: <code class="en-linea">saludo</code>.</li>
+        <li>Al compilar, Kogito <strong>genera el controlador REST</strong> con base <code class="en-linea">/saludo</code> y sus operaciones.</li>
+        <li>Levantas la app con <code class="en-linea">spring-boot:run</code> y haces <code class="en-linea">POST /saludo</code>.</li>
+        <li>Recibes <code class="en-linea">201 Created</code> con el <strong><code class="en-linea">id</code> de instancia</strong> y las variables de salida.</li>
+      </ol>
+
+      <div class="puente">
+        <p>
+          Detente en lo logrado: <strong>no escribiste ni un <code class="en-linea">@RestController</code>, ni un
+          <code class="en-linea">@PostMapping</code>, ni un DTO</strong>, y ya tienes una API REST <strong>versionada por proceso</strong>
+          —cada proceso es su propio recurso bajo su propia ruta— cuyo <strong>contrato JSON sale de las variables del proceso</strong>.
+          En Spring partías del controlador hacia el dominio; aquí partes del dominio (el proceso) y el controlador <em>cae solo</em>.
+          En el siguiente tema veremos cómo declarar esas variables, tiparlas y modelar el JSON de entrada y salida.
+        </p>
+      </div>
+
+      <div class="aviso alto">
+        <div class="titulo">⛔ Importante</div>
+        <p>
+          Error común: tratar de “añadir” un <code class="en-linea">@RestController</code> propio para exponer el proceso. No hace falta y
+          se pisaría con el generado. Si necesitas una ruta a la medida, se hace con la API programática de Kogito
+          (<code class="en-linea">ProcessService</code> y compañía), no replicando el controlador autogenerado a mano.
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="03-bpmn-alfabeto.html"><div class="dir">← Anterior</div><div class="tit">BPMN 2.0: el alfabeto</div></a>
+    <a href="05-variables-datos.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">Variables y datos del proceso</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot · Java 21</span>
+  </footer>
+
+</body>
+</html>

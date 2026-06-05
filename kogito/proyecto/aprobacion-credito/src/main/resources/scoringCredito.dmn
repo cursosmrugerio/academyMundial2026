@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/"
+             xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/"
+             xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/"
+             xmlns:feel="https://www.omg.org/spec/DMN/20191111/FEEL/"
+             xmlns:kie="https://kie.org/dmn/extensions/1.0"
+             id="_scoring_credito_definitions"
+             name="scoringCredito"
+             namespace="https://academy.com/dmn/scoringCredito"
+             exporter="academy-kogito"
+             exporterVersion="1.0.0">
+
+  <itemDefinition id="_tSolicitud" name="tSolicitud" isCollection="false">
+    <itemComponent id="_tSolicitud_edad" name="edad" isCollection="false">
+      <typeRef>number</typeRef>
+    </itemComponent>
+    <itemComponent id="_tSolicitud_ingresosMensuales" name="ingresosMensuales" isCollection="false">
+      <typeRef>number</typeRef>
+    </itemComponent>
+    <itemComponent id="_tSolicitud_montoSolicitado" name="montoSolicitado" isCollection="false">
+      <typeRef>number</typeRef>
+    </itemComponent>
+    <itemComponent id="_tSolicitud_plazoMeses" name="plazoMeses" isCollection="false">
+      <typeRef>number</typeRef>
+    </itemComponent>
+    <itemComponent id="_tSolicitud_tieneMora" name="tieneMora" isCollection="false">
+      <typeRef>boolean</typeRef>
+    </itemComponent>
+    <itemComponent id="_tSolicitud_nombre" name="nombre" isCollection="false">
+      <typeRef>string</typeRef>
+    </itemComponent>
+  </itemDefinition>
+
+  <itemDefinition id="_tEvaluacion" name="tEvaluacion" isCollection="false">
+    <itemComponent id="_tEvaluacion_score" name="score" isCollection="false">
+      <typeRef>number</typeRef>
+    </itemComponent>
+    <itemComponent id="_tEvaluacion_decision" name="decision" isCollection="false">
+      <typeRef>string</typeRef>
+    </itemComponent>
+    <itemComponent id="_tEvaluacion_motivo" name="motivo" isCollection="false">
+      <typeRef>string</typeRef>
+    </itemComponent>
+  </itemDefinition>
+
+  <inputData id="_input_solicitud" name="solicitud">
+    <variable id="_input_solicitud_var" name="solicitud" typeRef="tSolicitud"/>
+  </inputData>
+
+  <decision id="_decision_evaluacion" name="evaluacion">
+    <variable id="_decision_evaluacion_var" name="evaluacion" typeRef="tEvaluacion"/>
+    <informationRequirement id="_ir_evaluacion_solicitud">
+      <requiredInput href="#_input_solicitud"/>
+    </informationRequirement>
+    <context id="_ctx_evaluacion">
+      <contextEntry id="_ce_ratioMonto">
+        <variable id="_ce_ratioMonto_var" name="ratioMonto" typeRef="number"/>
+        <literalExpression id="_le_ratioMonto">
+          <text>if solicitud.ingresosMensuales != null and solicitud.ingresosMensuales &gt; 0
+then solicitud.montoSolicitado / solicitud.ingresosMensuales
+else 999</text>
+        </literalExpression>
+      </contextEntry>
+
+      <contextEntry id="_ce_puntosIngresos">
+        <variable id="_ce_puntosIngresos_var" name="puntosIngresos" typeRef="number"/>
+        <literalExpression id="_le_puntosIngresos">
+          <text>if solicitud.ingresosMensuales &gt;= 50000 then 40
+else if solicitud.ingresosMensuales &gt;= 30000 then 30
+else if solicitud.ingresosMensuales &gt;= 15000 then 20
+else if solicitud.ingresosMensuales &gt;= 8000 then 10
+else 0</text>
+        </literalExpression>
+      </contextEntry>
+
+      <contextEntry id="_ce_puntosRatio">
+        <variable id="_ce_puntosRatio_var" name="puntosRatio" typeRef="number"/>
+        <literalExpression id="_le_puntosRatio">
+          <text>if ratioMonto &lt;= 3 then 35
+else if ratioMonto &lt;= 6 then 25
+else if ratioMonto &lt;= 12 then 15
+else if ratioMonto &lt;= 20 then 5
+else 0</text>
+        </literalExpression>
+      </contextEntry>
+
+      <contextEntry id="_ce_puntosEdad">
+        <variable id="_ce_puntosEdad_var" name="puntosEdad" typeRef="number"/>
+        <literalExpression id="_le_puntosEdad">
+          <text>if solicitud.edad &gt;= 25 and solicitud.edad &lt;= 65 then 15 else 0</text>
+        </literalExpression>
+      </contextEntry>
+
+      <contextEntry id="_ce_puntosMora">
+        <variable id="_ce_puntosMora_var" name="puntosMora" typeRef="number"/>
+        <literalExpression id="_le_puntosMora">
+          <text>if solicitud.tieneMora = true then 0 else 10</text>
+        </literalExpression>
+      </contextEntry>
+
+      <contextEntry id="_ce_score">
+        <variable id="_ce_score_var" name="score" typeRef="number"/>
+        <literalExpression id="_le_score">
+          <text>puntosIngresos + puntosRatio + puntosEdad + puntosMora</text>
+        </literalExpression>
+      </contextEntry>
+
+      <contextEntry id="_ce_decision">
+        <variable id="_ce_decision_var" name="decision" typeRef="string"/>
+        <literalExpression id="_le_decision">
+          <text>if score &gt;= 70 then "APROBADO"
+else if score &gt;= 50 then "REVISION"
+else "RECHAZADO"</text>
+        </literalExpression>
+      </contextEntry>
+
+      <contextEntry id="_ce_motivo">
+        <variable id="_ce_motivo_var" name="motivo" typeRef="string"/>
+        <literalExpression id="_le_motivo">
+          <text>if solicitud.tieneMora = true then "Solicitante con mora registrada; score=" + string(score)
+else if score &gt;= 70 then "Perfil solido: ingresos suficientes y bajo nivel de endeudamiento; score=" + string(score)
+else if score &gt;= 50 then "Perfil intermedio: requiere revision manual del analista; score=" + string(score)
+else "Perfil de alto riesgo: ingresos insuficientes o monto elevado frente a ingresos; score=" + string(score)</text>
+        </literalExpression>
+      </contextEntry>
+
+      <contextEntry id="_ce_result">
+        <literalExpression id="_le_result">
+          <text>{ score: score, decision: decision, motivo: motivo }</text>
+        </literalExpression>
+      </contextEntry>
+    </context>
+  </decision>
+
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="_dmndiagram_scoring">
+      <dmndi:DMNShape id="_shape_input_solicitud" dmnElementRef="_input_solicitud">
+        <dc:Bounds x="160" y="240" width="160" height="80"/>
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="_shape_decision_evaluacion" dmnElementRef="_decision_evaluacion">
+        <dc:Bounds x="160" y="80" width="160" height="80"/>
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="_edge_ir_evaluacion_solicitud" dmnElementRef="_ir_evaluacion_solicitud">
+        <di:waypoint x="240" y="240"/>
+        <di:waypoint x="240" y="160"/>
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+
+</definitions>

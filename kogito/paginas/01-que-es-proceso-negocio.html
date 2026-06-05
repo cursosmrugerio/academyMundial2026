@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tema 01 · ¿Qué es un proceso de negocio? — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior (idéntica en todas las páginas) -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="../index.html" class="oculta-movil">← Anterior</a>
+    <a href="02-de-springboot-a-kogito.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Tema 01</span>
+    <h1>¿Qué es un proceso de negocio?</h1>
+    <p class="bajada">Antes de escribir una sola línea de Kogito, conviene entender qué estamos modelando: una secuencia coordinada de actividades que produce valor. Aquí lo veremos con ejemplos cotidianos y lo conectaremos con la forma en que hoy resuelves la orquestación en Spring Boot.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <section class="seccion">
+      <h2>La definición, sin rodeos</h2>
+      <p>Un <strong>proceso de negocio</strong> es una <strong>secuencia coordinada de actividades</strong> que, partiendo de un disparador y consumiendo unas entradas, produce un <strong>resultado con valor</strong> para alguien (un cliente, un área, la propia empresa). No es código ni una pantalla: es la <em>historia</em> de cómo algo se logra dentro de la organización.</p>
+
+      <p>Lo vives todos los días, aunque no lo llames así:</p>
+      <ul>
+        <li><strong>Pedir un crédito</strong>: el cliente solicita → se valida su identidad → se evalúa su riesgo → un analista aprueba o rechaza → se dispersa el dinero o se notifica el rechazo.</li>
+        <li><strong>Abrir una cuenta</strong>: capturas tus datos → el sistema verifica documentos → cumplimiento revisa → se crea la cuenta → te llega el contrato.</li>
+        <li><strong>Autorizar un pago</strong>: llega una orden → se valida saldo y límites → si supera cierto monto, alguien con poder de firma autoriza → se ejecuta la transferencia.</li>
+      </ul>
+
+      <p>Fíjate en el patrón: hay un <strong>inicio</strong>, hay <strong>pasos</strong>, hay <strong>decisiones</strong> (sí/no, monto mayor o menor, persona o sistema) y hay un <strong>final</strong>. Ese esqueleto es justo lo que aprenderemos a dibujar y a ejecutar.</p>
+
+      <div class="chips">
+        <span class="chip bpmn-evento">● Inicio: llega una solicitud</span>
+        <span class="chip bpmn-tarea">▭ Actividades: validar, evaluar, notificar</span>
+        <span class="chip bpmn-gateway">◆ Decisiones: ¿aprobado? ¿monto alto?</span>
+        <span class="chip bpmn-evento">◉ Fin: crédito otorgado</span>
+      </div>
+
+      <!-- Diagrama 1: proceso lineal de ejemplo (crédito) -->
+      <figure class="diagrama">
+        <svg viewBox="0 0 920 150" role="img" aria-label="Proceso de solicitud de crédito: inicio, validar solicitud, evaluar riesgo, decisión aprobado, fin">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Evento inicio -->
+          <circle cx="40" cy="75" r="22" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></circle>
+          <text x="40" y="118" text-anchor="middle" class="svg-texto">Solicitud</text>
+
+          <!-- Tarea 1 -->
+          <rect x="105" y="51" width="150" height="48" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="180" y="80" text-anchor="middle" class="svg-texto-b">Validar solicitud</text>
+
+          <!-- Tarea 2 -->
+          <rect x="305" y="51" width="150" height="48" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="380" y="80" text-anchor="middle" class="svg-texto-b">Evaluar riesgo</text>
+
+          <!-- Gateway decisión -->
+          <polygon points="560,75 595,40 630,75 595,110" class="svg-borde" fill="#fdf0d5" stroke="#f0a202"></polygon>
+          <text x="595" y="80" text-anchor="middle" class="svg-texto-b">¿OK?</text>
+
+          <!-- Tarea 3 -->
+          <rect x="685" y="51" width="150" height="48" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="760" y="80" text-anchor="middle" class="svg-texto-b">Dispersar dinero</text>
+
+          <!-- Evento fin -->
+          <circle cx="885" cy="75" r="22" class="svg-borde" fill="#fdeeee" stroke="#d64545" stroke-width="3"></circle>
+
+          <!-- Flujos -->
+          <line x1="62" y1="75" x2="105" y2="75" class="svg-flecha"></line>
+          <line x1="255" y1="75" x2="305" y2="75" class="svg-flecha"></line>
+          <line x1="455" y1="75" x2="560" y2="75" class="svg-flecha"></line>
+          <line x1="630" y1="75" x2="685" y2="75" class="svg-flecha"></line>
+          <text x="657" y="65" text-anchor="middle" class="svg-texto" fill="#1f9d55">sí</text>
+          <line x1="835" y1="75" x2="863" y2="75" class="svg-flecha"></line>
+        </svg>
+        <figcaption>Un proceso de solicitud de crédito visto como mapa: arranca con un evento, encadena actividades, decide en un punto y termina con un resultado de valor.</figcaption>
+      </figure>
+    </section>
+
+    <section class="seccion">
+      <h2>El problema: lógica enterrada vs. mapa visible</h2>
+      <p>Hoy, ese mismo proceso de crédito probablemente vive disperso: un trozo en un <code class="en-linea">@Service</code>, otro en un <code class="en-linea">if/else</code> dentro de un controlador, una llamada a otro microservicio metida en un <code class="en-linea">RestClient</code>, y el estado guardado a mano en una columna <code class="en-linea">estatus</code> de una tabla. Funciona… hasta que alguien pregunta: <em>«¿en qué paso se atora una solicitud de 3 millones?»</em> y la respuesta es <em>«déjame leer el código»</em>.</p>
+
+      <p>Cuando la lógica está <strong>enterrada</strong>, suceden cosas predecibles:</p>
+      <ul>
+        <li>El <strong>negocio no puede ver</strong> el flujo: depende de que un desarrollador se lo traduzca.</li>
+        <li>Cualquier cambio de regla (subir el umbral de autorización de $50,000 a $80,000) es un <strong>despliegue completo</strong>.</li>
+        <li>No hay <strong>trazabilidad</strong> nativa: para saber por dónde pasó cada solicitud hay que inventar logs y tablas de auditoría.</li>
+        <li>El estado de cada instancia se reconstruye «a mano» con banderas booleanas que nadie recuerda del todo.</li>
+      </ul>
+
+      <p>La alternativa es <strong>modelar el proceso como un mapa</strong>: un diagrama que cualquiera puede leer y que, además, <strong>se ejecuta tal cual se dibuja</strong>. El mismo dibujo que aprueba el área de negocio es lo que corre en producción. Eso es lo que hace BPMN sobre Kogito.</p>
+
+      <!-- Diagrama 2: contraste enterrado vs modelado -->
+      <figure class="diagrama">
+        <svg viewBox="0 0 880 250" role="img" aria-label="Comparación entre lógica enterrada en código y proceso modelado como mapa">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Panel izquierdo: enterrado -->
+          <rect x="20" y="20" width="380" height="210" rx="14" fill="#fdeeee" stroke="#d64545" stroke-width="2"></rect>
+          <text x="210" y="48" text-anchor="middle" class="svg-texto-b" fill="#d64545">Lógica enterrada en código</text>
+
+          <rect x="55" y="70" width="120" height="34" rx="6" fill="#ffffff" stroke="#d64545"></rect>
+          <text x="115" y="92" text-anchor="middle" class="svg-texto">if (monto&gt;X)</text>
+          <rect x="245" y="70" width="120" height="34" rx="6" fill="#ffffff" stroke="#d64545"></rect>
+          <text x="305" y="92" text-anchor="middle" class="svg-texto">RiesgoService</text>
+          <rect x="55" y="130" width="120" height="34" rx="6" fill="#ffffff" stroke="#d64545"></rect>
+          <text x="115" y="152" text-anchor="middle" class="svg-texto">otro micro</text>
+          <rect x="245" y="130" width="120" height="34" rx="6" fill="#ffffff" stroke="#d64545"></rect>
+          <text x="305" y="152" text-anchor="middle" class="svg-texto">columna estatus</text>
+          <text x="210" y="205" text-anchor="middle" class="svg-texto" fill="#d64545">Piezas sueltas · nadie ve el todo</text>
+
+          <!-- Flecha de transformación -->
+          <line x1="410" y1="125" x2="470" y2="125" class="svg-flecha"></line>
+
+          <!-- Panel derecho: modelado -->
+          <rect x="480" y="20" width="380" height="210" rx="14" fill="#eefaf2" stroke="#1f9d55" stroke-width="2"></rect>
+          <text x="670" y="48" text-anchor="middle" class="svg-texto-b" fill="#1f9d55">Proceso modelado (BPMN)</text>
+
+          <circle cx="525" cy="120" r="16" fill="#ffffff" stroke="#1f9d55" stroke-width="2"></circle>
+          <rect x="565" y="103" width="90" height="34" rx="9" fill="#ffffff" stroke="#004481"></rect>
+          <text x="610" y="125" text-anchor="middle" class="svg-texto">Validar</text>
+          <polygon points="700,120 720,100 740,120 720,140" fill="#fdf0d5" stroke="#f0a202"></polygon>
+          <rect x="765" y="103" width="70" height="34" rx="9" fill="#ffffff" stroke="#004481"></rect>
+          <text x="800" y="125" text-anchor="middle" class="svg-texto">Aprobar</text>
+
+          <line x1="541" y1="120" x2="565" y2="120" class="svg-flecha"></line>
+          <line x1="655" y1="120" x2="700" y2="120" class="svg-flecha"></line>
+          <line x1="740" y1="120" x2="765" y2="120" class="svg-flecha"></line>
+          <text x="670" y="205" text-anchor="middle" class="svg-texto" fill="#1f9d55">Un mapa · negocio y código lo leen igual</text>
+        </svg>
+        <figcaption>El mismo flujo, dos mundos: a la izquierda, decisiones dispersas que solo el código «sabe»; a la derecha, un proceso visible que se ejecuta tal cual se dibuja.</figcaption>
+      </figure>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota</div>
+        <p>No se trata de que el <code class="en-linea">if/else</code> esté «mal». Sigue siendo perfecto para validaciones técnicas. La diferencia es <strong>de qué</strong> hablamos: las reglas y los pasos que el <em>negocio</em> entiende y cambia merecen vivir en un mapa, no escondidos entre detalles de implementación.</p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>El ciclo de vida BPM</h2>
+      <p>Gestionar procesos (Business Process Management, BPM) no es un acto único: es un <strong>ciclo</strong> que gira sin parar. Modelas, ejecutas, observas cómo se comporta en la realidad y lo mejoras. Kogito vive sobre todo en la fase de <strong>ejecutar</strong>, pero el diagrama nace en <strong>diseñar/modelar</strong> y se afina con lo que aprendes en <strong>monitorear</strong>.</p>
+
+      <!-- Diagrama 3: ciclo de vida BPM en círculo, 5 fases -->
+      <figure class="diagrama">
+        <svg viewBox="0 0 520 480" role="img" aria-label="Ciclo de vida BPM con cinco fases en círculo: Diseñar, Modelar, Ejecutar, Monitorear y Optimizar, conectadas por flechas">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+            <marker id="flecha-az" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#1464a5"></path>
+            </marker>
+          </defs>
+
+          <!-- Centro -->
+          <circle cx="260" cy="240" r="58" fill="#072146"></circle>
+          <text x="260" y="234" text-anchor="middle" class="svg-texto-b" fill="#ffffff">Ciclo</text>
+          <text x="260" y="254" text-anchor="middle" class="svg-texto-b" fill="#2dcccd">BPM</text>
+
+          <!-- Fase 1: Diseñar (arriba) -->
+          <circle cx="260" cy="60" r="46" class="svg-relleno" stroke="#004481" stroke-width="2"></circle>
+          <text x="260" y="58" text-anchor="middle" class="svg-texto-b">1 · Diseñar</text>
+          <text x="260" y="76" text-anchor="middle" class="svg-texto">entender</text>
+
+          <!-- Fase 2: Modelar (derecha) -->
+          <circle cx="438" cy="180" r="46" class="svg-relleno" stroke="#004481" stroke-width="2"></circle>
+          <text x="438" y="178" text-anchor="middle" class="svg-texto-b">2 · Modelar</text>
+          <text x="438" y="196" text-anchor="middle" class="svg-texto">dibujar</text>
+
+          <!-- Fase 3: Ejecutar (abajo derecha) -->
+          <circle cx="370" cy="390" r="46" fill="#ddf7f7" stroke="#028484" stroke-width="3"></circle>
+          <text x="370" y="388" text-anchor="middle" class="svg-texto-b" fill="#028484">3 · Ejecutar</text>
+          <text x="370" y="406" text-anchor="middle" class="svg-texto" fill="#028484">Kogito</text>
+
+          <!-- Fase 4: Monitorear (abajo izquierda) -->
+          <circle cx="150" cy="390" r="46" class="svg-relleno" stroke="#004481" stroke-width="2"></circle>
+          <text x="150" y="388" text-anchor="middle" class="svg-texto-b">4 · Monitorear</text>
+          <text x="150" y="406" text-anchor="middle" class="svg-texto">medir</text>
+
+          <!-- Fase 5: Optimizar (izquierda) -->
+          <circle cx="82" cy="180" r="46" class="svg-relleno" stroke="#004481" stroke-width="2"></circle>
+          <text x="82" y="178" text-anchor="middle" class="svg-texto-b">5 · Optimizar</text>
+          <text x="82" y="196" text-anchor="middle" class="svg-texto">mejorar</text>
+
+          <!-- Flechas curvas en círculo (sentido horario) -->
+          <path d="M 305,73 A 200,200 0 0 1 410,140" class="svg-flecha"></path>
+          <path d="M 425,224 A 200,200 0 0 1 405,350" class="svg-flecha"></path>
+          <path d="M 325,420 A 200,200 0 0 1 195,420" class="svg-flecha"></path>
+          <path d="M 115,350 A 200,200 0 0 1 95,224" class="svg-flecha"></path>
+          <path d="M 110,140 A 200,200 0 0 1 215,73" class="svg-flecha"></path>
+        </svg>
+        <figcaption>El ciclo de vida BPM gira sin fin: diseñas el proceso, lo modelas en BPMN, lo ejecutas (aquí entra Kogito), monitoreas cómo corre en la realidad y optimizas. Cada vuelta deja el proceso un poco mejor.</figcaption>
+      </figure>
+
+      <ol class="pasos">
+        <li><strong>Diseñar.</strong> Entiendes el proceso real con quien lo vive: qué dispara una solicitud, qué pasos hay, quién decide qué. Aún sin herramientas, en pizarrón.</li>
+        <li><strong>Modelar.</strong> Plasmas ese entendimiento en un diagrama <strong>BPMN</strong> formal, con eventos, tareas y compuertas. Deja de ser un dibujo informal y se vuelve un artefacto preciso.</li>
+        <li><strong>Ejecutar.</strong> El diagrama se vuelve un servicio que corre. <span class="pildora aqua">Kogito</span> toma el archivo <code class="en-linea">.bpmn</code> y lo convierte en un servicio sobre Spring Boot con endpoints listos para usar.</li>
+        <li><strong>Monitorear.</strong> Observas las instancias reales: cuántas se atoran, dónde, cuánto tardan. La trazabilidad es nativa porque el motor sabe en qué nodo está cada instancia.</li>
+        <li><strong>Optimizar.</strong> Con esos datos ajustas el proceso (un paso de más, una decisión mal calibrada) y vuelves a empezar el ciclo con una versión mejor.</li>
+      </ol>
+    </section>
+
+    <section class="seccion">
+      <h2>¿Qué es BPMN y por qué un lenguaje visual estándar?</h2>
+      <p><strong>BPMN</strong> (Business Process Model and Notation) es el <strong>estándar internacional</strong> para dibujar procesos. Define un conjunto fijo de símbolos con significado preciso, de modo que un círculo siempre es un evento, un rectángulo redondeado siempre es una tarea y un rombo siempre es una decisión. Lo gobierna el <em>Object Management Group</em> (el mismo organismo detrás de UML), así que no es el dialecto de un fabricante: es un lenguaje común.</p>
+
+      <p>¿Por qué importa que sea <strong>visual</strong> y <strong>estándar</strong>? Porque lo entienden dos mundos que rara vez hablan el mismo idioma:</p>
+      <ul>
+        <li>El <strong>área de negocio</strong> lee el diagrama y reconoce su proceso, sin saber Java.</li>
+        <li>El <strong>desarrollador</strong> lee el mismo diagrama y sabe exactamente qué ejecutar, sin reinterpretar nada.</li>
+      </ul>
+
+      <p>Estos son los símbolos esenciales con los que trabajaremos casi todo el curso:</p>
+
+      <!-- Leyenda BPMN con figuras reales en SVG -->
+      <figure class="diagrama">
+        <svg viewBox="0 0 880 130" role="img" aria-label="Símbolos básicos de BPMN: evento de inicio, tarea, compuerta de decisión, evento de fin y flujo de secuencia">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Evento inicio -->
+          <circle cx="70" cy="45" r="24" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></circle>
+          <text x="70" y="95" text-anchor="middle" class="svg-texto-b">Evento inicio</text>
+          <text x="70" y="113" text-anchor="middle" class="svg-texto">algo arranca</text>
+
+          <!-- Tarea -->
+          <rect x="220" y="20" width="130" height="50" rx="11" class="svg-borde svg-relleno"></rect>
+          <text x="285" y="50" text-anchor="middle" class="svg-texto-b">Tarea</text>
+          <text x="285" y="95" text-anchor="middle" class="svg-texto-b">Actividad</text>
+          <text x="285" y="113" text-anchor="middle" class="svg-texto">se hace algo</text>
+
+          <!-- Gateway -->
+          <polygon points="490,45 525,10 560,45 525,80" class="svg-borde" fill="#fdf0d5" stroke="#f0a202"></polygon>
+          <text x="525" y="51" text-anchor="middle" class="svg-texto-b">×</text>
+          <text x="525" y="95" text-anchor="middle" class="svg-texto-b">Compuerta</text>
+          <text x="525" y="113" text-anchor="middle" class="svg-texto">se decide</text>
+
+          <!-- Evento fin -->
+          <circle cx="720" cy="45" r="24" class="svg-borde" fill="#fdeeee" stroke="#d64545" stroke-width="3"></circle>
+          <text x="720" y="95" text-anchor="middle" class="svg-texto-b">Evento fin</text>
+          <text x="720" y="113" text-anchor="middle" class="svg-texto">termina</text>
+
+          <!-- Flujo -->
+          <line x1="800" y1="45" x2="865" y2="45" class="svg-flecha"></line>
+          <text x="832" y="95" text-anchor="middle" class="svg-texto-b">Flujo</text>
+        </svg>
+        <figcaption>El alfabeto mínimo de BPMN: eventos (círculos), tareas (rectángulos redondeados), compuertas (rombos) y flujos de secuencia (flechas). Con esto se cuenta casi cualquier proceso.</figcaption>
+      </figure>
+
+      <table class="tabla">
+        <thead><tr><th>Símbolo</th><th>Qué representa</th><th>En el crédito</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Evento</strong> (círculo)</td><td>Algo que ocurre: un inicio, un fin, una espera, un mensaje.</td><td>«Llega una solicitud», «Crédito otorgado».</td></tr>
+          <tr><td><strong>Tarea</strong> (rectángulo redondeado)</td><td>Una unidad de trabajo: la hace una persona o un sistema.</td><td>«Validar solicitud», «Dispersar dinero».</td></tr>
+          <tr><td><strong>Compuerta</strong> (rombo)</td><td>Un punto de decisión o de bifurcación del flujo.</td><td>«¿El riesgo es aceptable?».</td></tr>
+          <tr><td><strong>Flujo de secuencia</strong> (flecha)</td><td>El orden: qué sigue después de qué.</td><td>De «Evaluar riesgo» a la compuerta «¿OK?».</td></tr>
+        </tbody>
+      </table>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>No memorices todos los símbolos de BPMN de golpe. Con <strong>eventos, tareas, compuertas y flujos</strong> ya puedes modelar la enorme mayoría de los procesos reales. El resto (temporizadores, señales, subprocesos) lo iremos sumando cuando un caso lo pida.</p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>Dos roles, un solo artefacto</h2>
+      <p>Aquí está la idea que cambia todo. En el desarrollo tradicional hay un documento que describe el proceso (un Word, un diagrama en alguna herramienta) y, <em>aparte</em>, está el código que lo implementa. Son <strong>dos cosas distintas</strong> que se desincronizan a la primera prisa: el documento dice una cosa y el código hace otra.</p>
+
+      <p>Con BPMN ejecutable, ese muro desaparece:</p>
+      <ul>
+        <li>El <strong>analista de negocio</strong> dibuja el proceso. Ese diagrama es la <strong>documentación viva</strong>.</li>
+        <li>El <strong>desarrollador</strong> lo hace ejecutable: conecta cada tarea con su servicio, define las condiciones de las compuertas, mapea las variables. Ese mismo diagrama es el <strong>código</strong>.</li>
+      </ul>
+
+      <p>El <strong>mismo archivo</strong> <code class="en-linea">.bpmn</code> es a la vez documentación y programa. Cuando el negocio quiere ver «cómo funciona hoy» el préstamo, no abre un documento que quizá esté desactualizado: abre el diagrama que <strong>literalmente está corriendo</strong> en producción.</p>
+
+      <!-- Diagrama 4: un artefacto, dos lecturas -->
+      <figure class="diagrama">
+        <svg viewBox="0 0 760 230" role="img" aria-label="El analista de negocio y el desarrollador convergen en un mismo archivo BPMN que es a la vez documentación y código">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Analista -->
+          <rect x="30" y="30" width="200" height="60" rx="12" fill="#e3f0fb" stroke="#1464a5" stroke-width="2"></rect>
+          <text x="130" y="58" text-anchor="middle" class="svg-texto-b">Analista de negocio</text>
+          <text x="130" y="78" text-anchor="middle" class="svg-texto">dibuja el proceso</text>
+
+          <!-- Desarrollador -->
+          <rect x="30" y="140" width="200" height="60" rx="12" fill="#ddf7f7" stroke="#028484" stroke-width="2"></rect>
+          <text x="130" y="168" text-anchor="middle" class="svg-texto-b">Desarrollador</text>
+          <text x="130" y="188" text-anchor="middle" class="svg-texto">lo hace ejecutable</text>
+
+          <!-- Archivo central -->
+          <rect x="430" y="70" width="180" height="90" rx="12" fill="#072146"></rect>
+          <text x="520" y="105" text-anchor="middle" class="svg-texto-b" fill="#ffffff">proceso.bpmn</text>
+          <text x="520" y="128" text-anchor="middle" class="svg-texto" fill="#2dcccd">documentación</text>
+          <text x="520" y="146" text-anchor="middle" class="svg-texto" fill="#2dcccd">+ código</text>
+
+          <!-- Flechas convergiendo -->
+          <line x1="230" y1="60" x2="425" y2="100" class="svg-flecha"></line>
+          <line x1="230" y1="170" x2="425" y2="130" class="svg-flecha"></line>
+
+          <!-- Salidas -->
+          <text x="700" y="100" text-anchor="middle" class="svg-texto-b" fill="#1f9d55">se lee</text>
+          <text x="700" y="140" text-anchor="middle" class="svg-texto-b" fill="#1f9d55">se ejecuta</text>
+          <line x1="610" y1="100" x2="660" y2="95" class="svg-flecha"></line>
+          <line x1="610" y1="130" x2="660" y2="135" class="svg-flecha"></line>
+        </svg>
+        <figcaption>Negocio y desarrollo dejan de trabajar sobre artefactos distintos: convergen en un único archivo BPMN que sirve a la vez como documentación y como programa ejecutable.</figcaption>
+      </figure>
+
+      <div class="aviso ojo">
+        <div class="titulo">⚠️ Ojo</div>
+        <p>«El diagrama es el código» no significa que el desarrollador desaparezca. Significa que su trabajo se mueve: en lugar de traducir un documento a Java, conecta el diagrama con servicios reales, escribe las pruebas y se asegura de que cada tarea haga lo que debe. El <em>qué</em> lo cuenta el mapa; el <em>cómo</em> sigue siendo tuyo.</p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>Comparativa: código enterrado vs. proceso modelado</h2>
+      <p>Pongamos lado a lado las dos formas de resolver el mismo crédito, para que la diferencia quede en claro:</p>
+
+      <table class="tabla">
+        <thead>
+          <tr><th>Criterio</th><th>Lógica enterrada en código</th><th>Proceso modelado (BPMN + Kogito)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Visibilidad</strong></td>
+            <td>El flujo solo existe «en la cabeza» de quien escribió el código y entre líneas de varios servicios.</td>
+            <td>Un diagrama que cualquiera abre y entiende; el flujo es explícito.</td>
+          </tr>
+          <tr>
+            <td><strong>¿Quién lo cambia?</strong></td>
+            <td>Solo un desarrollador, leyendo y modificando <code>if/else</code> dispersos.</td>
+            <td>El negocio propone el cambio sobre el diagrama; el desarrollador lo materializa. Mismo lenguaje.</td>
+          </tr>
+          <tr>
+            <td><strong>Trazabilidad</strong></td>
+            <td>Hay que inventarla: logs, tablas de auditoría, banderas de estado a mano.</td>
+            <td>Nativa: el motor sabe en qué nodo está cada instancia y guarda su historia.</td>
+          </tr>
+          <tr>
+            <td><strong>Estado de cada caso</strong></td>
+            <td>Columnas <code>estatus</code> y booleanos que hay que mantener manualmente.</td>
+            <td>El propio motor persiste y gestiona el estado de cada instancia del proceso.</td>
+          </tr>
+          <tr>
+            <td><strong>Pruebas</strong></td>
+            <td>Tests dispersos por servicio; el flujo completo es difícil de cubrir.</td>
+            <td>Se prueba el proceso de punta a punta con <code>JUnit</code>, instanciándolo y verificando por qué nodos pasa.</td>
+          </tr>
+          <tr>
+            <td><strong>Endpoint REST</strong></td>
+            <td>Escribes a mano un <code>@RestController</code> por cada operación.</td>
+            <td>Se <strong>autogenera</strong> a partir del proceso: arrancar, consultar y avanzar instancias sin escribir el controlador.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="aviso alto">
+        <div class="titulo">⛔ Importante</div>
+        <p>Un error frecuente es modelar <em>todo</em> como proceso, incluso validaciones de campo o cálculos triviales. BPMN brilla en flujos con <strong>pasos, esperas, decisiones de negocio y participación humana</strong>. Para una validación de formato de un correo, un método Java de tres líneas sigue siendo la respuesta correcta. Usa cada herramienta donde aporta.</p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>El puente con lo que ya sabes</h2>
+
+      <div class="puente">
+        <p>Hoy, cuando un caso de uso encadena varios servicios, lo orquestas <strong>a mano</strong>: un método de servicio llama a <code class="en-linea">validarSolicitud()</code>, luego a <code class="en-linea">evaluarRiesgo()</code>, mete un <code class="en-linea">if (riesgo &gt; UMBRAL)</code> para decidir, invoca otro microservicio con <code class="en-linea">RestClient</code> y, al final, actualiza una columna <code class="en-linea">estatus</code> en la base con JPA. Todo eso es real, funciona… y vive disperso entre clases.</p>
+        <p>En Kogito, esa misma orquestación se convierte en un <strong>mapa que se ejecuta tal cual se dibuja</strong>: las tareas son tus <code class="en-linea">@Service</code>, las compuertas son tus <code class="en-linea">if</code>, las variables del proceso son los datos que paseas entre pasos, y el estado lo persiste el propio motor en lugar de tu columna <code class="en-linea">estatus</code>. Lo que orquestabas con código imperativo, ahora lo declaras visualmente.</p>
+      </div>
+
+      <p>Para que quede tangible, así se ve hoy esa orquestación manual en Spring Boot —el «antes» que iremos transformando en el resto del curso:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">CreditoService.java</span></div>
+        <pre><code><span class="anot">@Service</span>
+<span class="kw">public class</span> <span class="typ">CreditoService</span> {
+
+    <span class="kw">public</span> <span class="typ">Resultado</span> procesarCredito(<span class="typ">Solicitud</span> solicitud) {
+        <span class="cmt">// 1. Validar (sería una "Tarea" en BPMN)</span>
+        validarSolicitud(solicitud);
+
+        <span class="cmt">// 2. Evaluar riesgo (otra "Tarea")</span>
+        <span class="kw">int</span> riesgo = riesgoService.evaluar(solicitud);
+
+        <span class="cmt">// 3. Decidir (esto sería una "Compuerta" ◆)</span>
+        <span class="kw">if</span> (riesgo &gt; UMBRAL_RIESGO) {
+            <span class="kw">return</span> notificarRechazo(solicitud);
+        }
+
+        <span class="cmt">// 4. Orquestación manual de otro servicio</span>
+        dispersionClient.dispersar(solicitud.getMonto());
+
+        <span class="cmt">// 5. Estado guardado a mano (lo hará el motor en Kogito)</span>
+        solicitud.setEstatus(<span class="str">"OTORGADO"</span>);
+        repositorio.save(solicitud);
+
+        <span class="kw">return</span> <span class="typ">Resultado</span>.otorgado(solicitud);
+    }
+}</code></pre>
+      </div>
+
+      <p>Cada comentario de ese método es, en realidad, un elemento del diagrama que ya viste: la validación y la dispersión son <strong>tareas</strong>, el <code class="en-linea">if</code> es una <strong>compuerta</strong>, y el <code class="en-linea">save</code> del estatus es algo que el motor de procesos hará por ti. En el siguiente tema daremos el salto: pasaremos de este servicio imperativo a un proceso Kogito sobre Spring Boot, con su endpoint REST autogenerado.</p>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>Recuerda esta equivalencia mientras avanzas: <span class="pildora azul">Tarea ≈ @Service</span> · <span class="pildora ambar">Compuerta ≈ if/else</span> · <span class="pildora aqua">Variable de proceso ≈ datos que paseas entre métodos</span> · <span class="pildora verde">Estado ≈ lo que hoy guardas a mano</span>. Te servirá de mapa mental en todo el curso.</p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>Lo que te llevas de este tema</h2>
+      <ul>
+        <li>Un <strong>proceso de negocio</strong> es una secuencia coordinada de actividades que produce valor: pedir un crédito, abrir una cuenta, autorizar un pago.</li>
+        <li>Cuando esa lógica vive <strong>enterrada</strong> en <code class="en-linea">if/else</code> y servicios sueltos, pierdes visibilidad, trazabilidad y agilidad para cambiar reglas.</li>
+        <li><strong>BPMN</strong> es el lenguaje visual estándar que entienden negocio y desarrollo; con eventos, tareas, compuertas y flujos modelas casi todo.</li>
+        <li>El <strong>ciclo de vida BPM</strong> (diseñar → modelar → ejecutar → monitorear → optimizar) gira sin fin, y Kogito vive sobre todo en «ejecutar».</li>
+        <li>El <strong>mismo archivo</strong> <code class="en-linea">.bpmn</code> es documentación y código: lo que dibuja el analista es lo que ejecuta el desarrollador.</li>
+        <li>Lo que hoy orquestas a mano en Spring, mañana será un <strong>mapa que se ejecuta tal cual se dibuja</strong>.</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="../index.html"><div class="dir">← Anterior</div><div class="tit">Índice del curso</div></a>
+    <a href="02-de-springboot-a-kogito.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">De Spring Boot a Kogito</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot · Java 21</span>
+  </footer>
+
+</body>
+</html>

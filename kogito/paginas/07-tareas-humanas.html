@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tema 07 · Tareas humanas (Human Tasks) — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="06-gateways-decisiones.html" class="oculta-movil">← Anterior</a>
+    <a href="08-reglas-drools-dmn.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Tema 07</span>
+    <h1>Tareas humanas (Human Tasks)</h1>
+    <p class="bajada">Hay decisiones que ningún <code class="en-linea">if</code> puede tomar: las toma una persona. Aprenderás a poner un punto en el proceso donde el flujo <strong>se pausa de forma duradera</strong> y espera a que alguien —el analista, el gerente— reclame la tarea, la revise y la complete con su veredicto.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Qué es una tarea de usuario (User Task)</h2>
+      <p>
+        Hasta ahora tus nodos los ejecutaba la máquina: una <strong>tarea de script</strong> corría un fragmento de Java,
+        una <strong>tarea de servicio</strong> llamaba a una clase o a un REST. Todas tenían algo en común: el motor las
+        ejecutaba y seguía adelante sin parar. Una <strong>tarea de usuario</strong> (<code class="en-linea">User Task</code>)
+        es distinta. Es un punto donde el proceso <strong>se detiene y espera a una persona</strong>.
+      </p>
+      <p>
+        Cuando la instancia llega a una tarea de usuario, el motor crea una <strong>tarea pendiente</strong>, la deja
+        a disposición de quien deba atenderla… y <strong>congela ese camino del flujo</strong>. No hay un hilo girando
+        en bucle, ni nada vivo en memoria consumiendo CPU: simplemente queda una tarea esperando. El proceso reanudará
+        su marcha solo cuando esa persona la <strong>complete</strong>, devolviendo los datos de su decisión.
+      </p>
+
+      <div class="chips">
+        <span class="chip bpmn-tarea">
+          <span class="ico"><svg viewBox="0 0 18 18"><rect x="2" y="4" width="14" height="10" rx="3" fill="#eef3f9" stroke="#004481" stroke-width="2"></rect><circle cx="5.5" cy="6.5" r="1.4" fill="#004481"></circle></svg></span>
+          Tarea de usuario (humana)
+        </span>
+        <span class="chip bpmn-tarea">
+          <span class="ico"><svg viewBox="0 0 18 18"><rect x="2" y="4" width="14" height="10" rx="3" fill="#eef3f9" stroke="#004481" stroke-width="2"></rect></svg></span>
+          Tarea de script / servicio
+        </span>
+        <span class="chip bpmn-flujo">
+          <span class="ico"><svg viewBox="0 0 18 18"><line x1="2" y1="9" x2="14" y2="9" stroke="#495567" stroke-width="2"></line><path d="M12,5 L16,9 L12,13 Z" fill="#495567"></path></svg></span>
+          Flujo de secuencia
+        </span>
+      </div>
+
+      <p>
+        En BPMN, la tarea de usuario se dibuja como un rectángulo redondeado con el icono de una <strong>personita</strong>
+        en la esquina superior izquierda. Ese icono es la señal visual de que <em>aquí el proceso espera a un humano</em>.
+      </p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 680 160" role="img" aria-label="Proceso que llega a una tarea de usuario Revisión del analista donde el flujo se pausa esperando a una persona, antes de continuar al fin">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Evento de inicio -->
+          <circle cx="56" cy="78" r="24" fill="#eefaf2" stroke="#1f9d55" stroke-width="2.5"></circle>
+          <text x="56" y="124" text-anchor="middle" class="svg-texto">Inicio</text>
+
+          <!-- Tarea de usuario -->
+          <rect x="200" y="48" width="240" height="60" rx="12" class="svg-borde svg-relleno"></rect>
+          <!-- icono de persona -->
+          <circle cx="222" cy="64" r="5" fill="none" stroke="#004481" stroke-width="2"></circle>
+          <path d="M214,78 a8,7 0 0 1 16,0" fill="none" stroke="#004481" stroke-width="2"></path>
+          <text x="328" y="74" text-anchor="middle" class="svg-texto-b">Revisión del analista</text>
+          <text x="328" y="93" text-anchor="middle" class="svg-texto" font-size="12">tarea de usuario</text>
+
+          <!-- Indicador de pausa -->
+          <text x="328" y="138" text-anchor="middle" class="svg-texto" font-size="12" fill="#b87900">⏸ el flujo se pausa aquí</text>
+
+          <!-- Evento de fin -->
+          <circle cx="624" cy="78" r="24" fill="#fdeeee" stroke="#d64545" stroke-width="3.5"></circle>
+          <text x="624" y="124" text-anchor="middle" class="svg-texto">Fin</text>
+
+          <!-- Flujos -->
+          <line x1="82" y1="78" x2="198" y2="78" class="svg-flecha"></line>
+          <line x1="440" y1="78" x2="598" y2="78" class="svg-flecha"></line>
+        </svg>
+        <figcaption>La tarea de usuario interrumpe la ejecución: la instancia queda viva pero <strong>suspendida</strong> en ese nodo hasta que una persona la complete.</figcaption>
+      </figure>
+
+      <div class="puente">
+        <p>
+          A diferencia de una llamada REST <strong>síncrona</strong> —donde tu hilo se bloquea unos milisegundos esperando
+          la respuesta de otro servicio—, aquí el flujo se <strong>suspende de forma duradera</strong>. No es un
+          <code class="en-linea">RestTemplate.getForObject(...)</code> que aguarda dos segundos: es una espera que puede
+          durar <strong>minutos, horas o días</strong>. Mientras tanto, tu aplicación atiende otras peticiones con normalidad;
+          esta instancia no ocupa ningún hilo.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>El ciclo de vida WS-HumanTask</h2>
+      <p>
+        Las tareas humanas en Kogito siguen el estándar <strong>WS-HumanTask</strong> (WS-HT). Cada tarea no es solo
+        “pendiente / hecha”: pasa por una pequeña <strong>máquina de estados</strong>. Conocerla te ayuda a entender qué
+        operación está permitida en cada momento y qué endpoint debes llamar.
+      </p>
+
+      <p>El camino feliz recorre cuatro transiciones. Las dos centrales son las que un usuario realiza explícitamente:</p>
+
+      <ul>
+        <li><strong>activate</strong> — el sistema activa la tarea en cuanto el flujo llega al nodo: pasa de <em>Created</em> a <em>Ready</em>.</li>
+        <li><strong>claim</strong> (reclamar) — un dueño potencial la toma para sí: de <em>Ready</em> a <em>Reserved</em>. Ya es <em>suya</em>.</li>
+        <li><strong>start</strong> (iniciar) — empieza a trabajarla: de <em>Reserved</em> a <em>InProgress</em>.</li>
+        <li><strong>complete</strong> (completar) — termina y entrega su decisión: de <em>InProgress</em> a <em>Completed</em>. El flujo se reanuda.</li>
+      </ul>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 920 360" role="img" aria-label="Máquina de estados WS-HumanTask: Created activa a Ready; claim lleva a Reserved; start lleva a InProgress; complete lleva a Completed. Desde varios estados se puede ir a Aborted o Error.">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Created -->
+          <rect x="20" y="140" width="120" height="56" rx="14" fill="#eef3f9" stroke="#1464a5" stroke-width="2"></rect>
+          <text x="80" y="173" text-anchor="middle" class="svg-texto-b" font-size="13">Created</text>
+
+          <!-- Ready -->
+          <rect x="210" y="140" width="120" height="56" rx="14" fill="#eef3f9" stroke="#1464a5" stroke-width="2"></rect>
+          <text x="270" y="173" text-anchor="middle" class="svg-texto-b" font-size="13">Ready</text>
+
+          <!-- Reserved -->
+          <rect x="400" y="140" width="120" height="56" rx="14" fill="#fdf0d5" stroke="#b87900" stroke-width="2"></rect>
+          <text x="460" y="173" text-anchor="middle" class="svg-texto-b" font-size="13" fill="#b87900">Reserved</text>
+
+          <!-- InProgress -->
+          <rect x="590" y="140" width="130" height="56" rx="14" fill="#fdf0d5" stroke="#b87900" stroke-width="2"></rect>
+          <text x="655" y="173" text-anchor="middle" class="svg-texto-b" font-size="13" fill="#b87900">InProgress</text>
+
+          <!-- Completed -->
+          <rect x="780" y="140" width="120" height="56" rx="14" fill="#e3f7ec" stroke="#1f9d55" stroke-width="2.5"></rect>
+          <text x="840" y="173" text-anchor="middle" class="svg-texto-b" font-size="13" fill="#1f9d55">Completed</text>
+
+          <!-- Aborted -->
+          <rect x="400" y="290" width="130" height="50" rx="14" fill="#fdeeee" stroke="#d64545" stroke-width="2"></rect>
+          <text x="465" y="320" text-anchor="middle" class="svg-texto-b" font-size="13" fill="#d64545">Aborted / Exited</text>
+
+          <!-- Error -->
+          <rect x="600" y="290" width="120" height="50" rx="14" fill="#fdeeee" stroke="#d64545" stroke-width="2"></rect>
+          <text x="660" y="320" text-anchor="middle" class="svg-texto-b" font-size="13" fill="#d64545">Error / Failed</text>
+
+          <!-- Transiciones felices -->
+          <line x1="140" y1="168" x2="208" y2="168" class="svg-flecha"></line>
+          <text x="174" y="158" text-anchor="middle" class="svg-texto" font-size="11" fill="#028484">activate</text>
+
+          <line x1="330" y1="168" x2="398" y2="168" class="svg-flecha"></line>
+          <text x="364" y="158" text-anchor="middle" class="svg-texto-b" font-size="12" fill="#004481">claim</text>
+
+          <line x1="520" y1="168" x2="588" y2="168" class="svg-flecha"></line>
+          <text x="554" y="158" text-anchor="middle" class="svg-texto-b" font-size="12" fill="#004481">start</text>
+
+          <line x1="720" y1="168" x2="778" y2="168" class="svg-flecha"></line>
+          <text x="749" y="158" text-anchor="middle" class="svg-texto-b" font-size="12" fill="#004481">complete</text>
+
+          <!-- release: Reserved vuelve a Ready -->
+          <path d="M460,140 C440,108 296,108 274,138" class="svg-flecha"></path>
+          <text x="368" y="106" text-anchor="middle" class="svg-texto" font-size="11" fill="#028484">release</text>
+
+          <!-- Ramas a Aborted -->
+          <line x1="270" y1="196" x2="430" y2="288" class="svg-flecha"></line>
+          <text x="318" y="252" text-anchor="middle" class="svg-texto" font-size="11" fill="#d64545">exit / skip</text>
+
+          <!-- Rama a Error desde InProgress -->
+          <line x1="655" y1="196" x2="662" y2="288" class="svg-flecha"></line>
+          <text x="712" y="245" text-anchor="middle" class="svg-texto" font-size="11" fill="#d64545">fail</text>
+        </svg>
+        <figcaption>Ciclo de vida WS-HumanTask. Camino feliz: <strong>Created → Ready → (claim) Reserved → (start) InProgress → (complete) Completed</strong>. Con <em>release</em> se devuelve la tarea al grupo; con <em>exit</em>, <em>skip</em> o <em>fail</em> se desvía a estados terminales de cancelación o error.</figcaption>
+      </figure>
+
+      <table class="tabla">
+        <thead>
+          <tr><th>Estado</th><th>Qué significa</th><th>Operación que entra</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="pildora azul">Created</span></td><td>La tarea acaba de instanciarse; aún no es visible para nadie.</td><td>— (el flujo llegó al nodo)</td></tr>
+          <tr><td><span class="pildora azul">Ready</span></td><td>Disponible en la bandeja de todos sus dueños potenciales. Nadie la ha tomado.</td><td><code>activate</code> (automática)</td></tr>
+          <tr><td><span class="pildora ambar">Reserved</span></td><td>Un usuario la <strong>reclamó</strong>: ahora es suya y desaparece de las bandejas ajenas.</td><td><code>claim</code></td></tr>
+          <tr><td><span class="pildora ambar">InProgress</span></td><td>El dueño la está trabajando activamente.</td><td><code>start</code></td></tr>
+          <tr><td><span class="pildora verde">Completed</span></td><td>Terminada con éxito; sus datos de salida vuelven al proceso y el flujo continúa.</td><td><code>complete</code></td></tr>
+          <tr><td><span class="pildora rojo">Aborted / Exited</span></td><td>Cancelada administrativamente o porque el proceso siguió otro rumbo.</td><td><code>exit</code> / <code>skip</code></td></tr>
+          <tr><td><span class="pildora rojo">Error / Failed</span></td><td>Falló durante su ejecución.</td><td><code>fail</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota</div>
+        <p>
+          En la práctica, muchos clientes saltan el paso explícito de <code class="en-linea">start</code>: al
+          completar una tarea reservada, Kogito hace la transición intermedia por ti. Lo importante es la pareja
+          <strong>claim → complete</strong>: <em>la tomo</em> y luego <em>la entrego con su resultado</em>. Existe también
+          <code class="en-linea">release</code> para devolverla al grupo si te la reclamaste por error.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Asignación: ¿quién puede atenderla?</h2>
+      <p>
+        Una tarea no flota en el aire: el motor necesita saber <strong>quién puede tomarla</strong>. Eso lo declaras
+        en la propia tarea de usuario mediante sus <strong>asignaciones</strong>. Hay dos formas típicas:
+      </p>
+      <ul>
+        <li><strong>Un actor concreto</strong> (un <code class="en-linea">ActorId</code>): la tarea se reserva directamente para una persona, por ejemplo <code class="en-linea">maria</code>.</li>
+        <li><strong>Un grupo</strong> (un <code class="en-linea">GroupId</code>): la tarea queda en <em>Ready</em> y aparece en la bandeja de <strong>todas</strong> las personas de ese grupo —por ejemplo el grupo <code class="en-linea">analistas</code>—. La primera que la <strong>reclame</strong> se la lleva.</li>
+      </ul>
+
+      <p>Los roles del estándar WS-HumanTask que más usarás:</p>
+      <table class="tabla">
+        <thead>
+          <tr><th>Rol</th><th>Quién es</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Dueños potenciales</strong> (<code>potentialOwners</code>)</td><td>Quienes <em>pueden</em> reclamar la tarea: un actor o todo un grupo.</td></tr>
+          <tr><td><strong>Dueño real</strong> (<code>actualOwner</code>)</td><td>Quien la <em>reclamó</em> y ahora la tiene reservada.</td></tr>
+          <tr><td><strong>Administrador de negocio</strong> (<code>businessAdministrators</code>)</td><td>Puede reasignar, saltar o cancelar cualquier tarea.</td></tr>
+          <tr><td><strong>Excluidos</strong> (<code>excludedOwners</code>)</td><td>Usuarios a los que se prohíbe explícitamente reclamarla.</td></tr>
+        </tbody>
+      </table>
+
+      <p>
+        En el editor visual asignas grupos y actores en las propiedades de la tarea. Por dentro, el XML BPMN guarda algo
+        parecido a esto (no lo escribes a mano, pero conviene reconocerlo):
+      </p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">src/main/resources/credito.bpmn2 · fragmento de la tarea</span></div>
+        <pre><code><span class="cmt">&lt;!-- La tarea de usuario asignada al grupo "analistas" --&gt;</span>
+<span class="kw">&lt;userTask</span> <span class="anot">id</span>=<span class="str">"_revision"</span> <span class="anot">name</span>=<span class="str">"Revisión del analista"</span><span class="kw">&gt;</span>
+
+  <span class="cmt">&lt;!-- Quién puede reclamarla: cualquiera del grupo analistas --&gt;</span>
+  <span class="kw">&lt;potentialOwner&gt;</span>
+    <span class="kw">&lt;resourceAssignmentExpression&gt;</span>
+      <span class="kw">&lt;formalExpression&gt;</span>analistas<span class="kw">&lt;/formalExpression&gt;</span>
+    <span class="kw">&lt;/resourceAssignmentExpression&gt;</span>
+  <span class="kw">&lt;/potentialOwner&gt;</span>
+
+  <span class="cmt">&lt;!-- Entrada: le mostramos la solicitud al analista --&gt;</span>
+  <span class="kw">&lt;dataInputAssociation&gt;</span>
+    <span class="kw">&lt;sourceRef&gt;</span>solicitud<span class="kw">&lt;/sourceRef&gt;</span> <span class="kw">&lt;targetRef&gt;</span>solicitudIn<span class="kw">&lt;/targetRef&gt;</span>
+  <span class="kw">&lt;/dataInputAssociation&gt;</span>
+
+  <span class="cmt">&lt;!-- Salida: su veredicto vuelve al proceso --&gt;</span>
+  <span class="kw">&lt;dataOutputAssociation&gt;</span>
+    <span class="kw">&lt;sourceRef&gt;</span>veredictoOut<span class="kw">&lt;/sourceRef&gt;</span> <span class="kw">&lt;targetRef&gt;</span>veredicto<span class="kw">&lt;/targetRef&gt;</span>
+  <span class="kw">&lt;/dataOutputAssociation&gt;</span>
+<span class="kw">&lt;/userTask&gt;</span></code></pre>
+      </div>
+
+      <h3>Bandeja de tareas y formularios autogenerados</h3>
+      <p>
+        Las tareas en <em>Ready</em> forman la <strong>bandeja de tareas</strong> (<em>task inbox</em>) de cada usuario: la lista
+        de “cosas que me toca atender”. Kogito puede generar, a partir de las entradas y salidas de cada tarea, un
+        <strong>formulario</strong> básico para verla y completarla; y la <strong>Management Console</strong> ofrece una bandeja
+        lista para usar. Para integraciones a la medida, sin embargo, lo que de verdad consumes son los <strong>endpoints REST</strong>
+        que el proceso autogenera —que es justo lo que veremos ahora—.
+      </p>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>
+          El usuario que reclama o completa la tarea suele venir de tu capa de seguridad (Spring Security): el
+          <code class="en-linea">user</code> y sus <code class="en-linea">groups</code> se pasan a Kogito, que comprueba que esa
+          persona pertenezca a los dueños potenciales. La autorización del proceso y la de tu aplicación hablan el mismo idioma.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Endpoints REST que Kogito genera para las tareas</h2>
+      <p>
+        Igual que un proceso autogenera su API (lo viste en el Tema 04), <strong>cada tarea de usuario genera sus propios
+        endpoints REST</strong>, anclados bajo la ruta del proceso y de la instancia. No escribes ningún
+        <code class="en-linea">@RestController</code>: las rutas nacen del nodo de la tarea.
+      </p>
+      <p>
+        Supón el proceso <code class="en-linea">credito</code> con la tarea <code class="en-linea">revision</code>. Para una
+        instancia concreta <code class="en-linea">{piId}</code> y una tarea concreta <code class="en-linea">{taskId}</code>, estas
+        son las operaciones clave:
+      </p>
+
+      <table class="tabla">
+        <thead>
+          <tr><th>Verbo</th><th>Ruta</th><th>Qué hace</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pildora azul">GET</span></td>
+            <td><code>/credito/{piId}/tasks?user=maria&amp;group=analistas</code></td>
+            <td>Lista las tareas de esa instancia visibles para <code>maria</code> (su bandeja para esa instancia).</td>
+          </tr>
+          <tr>
+            <td><span class="pildora azul">GET</span></td>
+            <td><code>/credito/{piId}/revision/{taskId}?user=maria&amp;group=analistas</code></td>
+            <td>Devuelve el detalle de la tarea: sus datos de entrada y el esquema de lo que debe completarse.</td>
+          </tr>
+          <tr>
+            <td><span class="pildora verde">POST</span></td>
+            <td><code>/credito/{piId}/revision/{taskId}/phases/claim?user=maria&amp;group=analistas</code></td>
+            <td><strong>Reclama</strong> (claim) la tarea: pasa a <em>Reserved</em> a nombre de <code>maria</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="pildora ambar">POST</span></td>
+            <td><code>/credito/{piId}/revision/{taskId}/phases/release?user=maria&amp;group=analistas</code></td>
+            <td>La <strong>libera</strong> (release): vuelve a <em>Ready</em> y reaparece en la bandeja del grupo.</td>
+          </tr>
+          <tr>
+            <td><span class="pildora verde">POST</span></td>
+            <td><code>/credito/{piId}/revision/{taskId}?user=maria&amp;group=analistas</code></td>
+            <td><strong>Completa</strong> (complete) la tarea enviando los datos de salida en el cuerpo JSON. El flujo se reanuda.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota</div>
+        <p>
+          Las <em>fases</em> (<code class="en-linea">/phases/{fase}</code>) cubren las transiciones de la máquina de estados:
+          <code class="en-linea">claim</code>, <code class="en-linea">release</code>, <code class="en-linea">complete</code>,
+          <code class="en-linea">skip</code>… El <code class="en-linea">POST</code> directo a la ruta de la tarea (sin
+          <code class="en-linea">/phases</code>) es el atajo habitual para <strong>completarla</strong>. Los parámetros
+          <code class="en-linea">user</code> y <code class="en-linea">group</code> identifican <em>quién</em> actúa, para que el
+          motor valide los permisos.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>El ejemplo del crédito, paso a paso</h2>
+      <p>
+        Retomemos el proceso de evaluación de crédito. Tras una decisión automática, el camino se bifurca en un
+        <strong>gateway exclusivo</strong> (Tema 06): si la solicitud es directa se aprueba o rechaza sola, pero si el
+        resultado es <code class="en-linea">REVISION</code>, el flujo entra en la tarea humana
+        <strong>Revisión del analista</strong>. Ahí el proceso se detiene y espera.
+      </p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 900 260" role="img" aria-label="Proceso de crédito: tras un gateway exclusivo, la rama REVISION lleva a la tarea humana Revisión del analista; las otras ramas aprueban o rechazan automáticamente.">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Inicio -->
+          <circle cx="44" cy="120" r="22" fill="#eefaf2" stroke="#1f9d55" stroke-width="2.5"></circle>
+          <text x="44" y="162" text-anchor="middle" class="svg-texto" font-size="12">Solicitud</text>
+
+          <!-- Gateway exclusivo -->
+          <path d="M170,120 L210,80 L250,120 L210,160 Z" fill="#fdf0d5" stroke="#f0a202" stroke-width="2.5"></path>
+          <text x="210" y="125" text-anchor="middle" class="svg-texto-b" font-size="16" fill="#b87900">×</text>
+          <text x="210" y="186" text-anchor="middle" class="svg-texto" font-size="12">¿resultado?</text>
+
+          <!-- Rama REVISION -> tarea humana -->
+          <rect x="360" y="92" width="220" height="56" rx="12" class="svg-borde svg-relleno"></rect>
+          <circle cx="382" cy="108" r="5" fill="none" stroke="#004481" stroke-width="2"></circle>
+          <path d="M374,122 a8,7 0 0 1 16,0" fill="none" stroke="#004481" stroke-width="2"></path>
+          <text x="478" y="116" text-anchor="middle" class="svg-texto-b" font-size="13">Revisión del analista</text>
+          <text x="478" y="134" text-anchor="middle" class="svg-texto" font-size="11">grupo: analistas</text>
+
+          <!-- Fin aprobado (desde tarea y rama directa) -->
+          <circle cx="720" cy="60" r="22" fill="#e3f7ec" stroke="#1f9d55" stroke-width="3.5"></circle>
+          <text x="720" y="30" text-anchor="middle" class="svg-texto" font-size="12" fill="#1f9d55">Aprobado</text>
+
+          <!-- Fin rechazado -->
+          <circle cx="720" cy="190" r="22" fill="#fdeeee" stroke="#d64545" stroke-width="3.5"></circle>
+          <text x="720" y="230" text-anchor="middle" class="svg-texto" font-size="12" fill="#d64545">Rechazado</text>
+
+          <!-- Flujos -->
+          <line x1="66" y1="120" x2="168" y2="120" class="svg-flecha"></line>
+          <line x1="250" y1="120" x2="358" y2="120" class="svg-flecha"></line>
+          <text x="304" y="110" text-anchor="middle" class="svg-texto" font-size="11" fill="#b87900">REVISION</text>
+
+          <!-- De la tarea a aprobado / rechazado segun veredicto -->
+          <path d="M580,108 C650,96 670,80 700,68" class="svg-flecha"></path>
+          <path d="M580,140 C650,160 670,176 700,184" class="svg-flecha"></path>
+          <text x="648" y="128" text-anchor="middle" class="svg-texto" font-size="11" fill="#028484">según veredicto</text>
+
+          <!-- Rama directa aprobado -->
+          <path d="M225,86 C300,30 600,28 700,52" class="svg-flecha"></path>
+          <text x="430" y="34" text-anchor="middle" class="svg-texto" font-size="11" fill="#1f9d55">directo: aprueba</text>
+
+          <!-- Rama directa rechazo -->
+          <path d="M225,154 C320,230 600,232 700,200" class="svg-flecha"></path>
+          <text x="430" y="248" text-anchor="middle" class="svg-texto" font-size="11" fill="#d64545">directo: rechaza</text>
+        </svg>
+        <figcaption>Solo la rama <code>REVISION</code> pasa por la tarea humana. La decisión del analista (su <strong>veredicto</strong>) determina si la instancia termina en <em>Aprobado</em> o <em>Rechazado</em>.</figcaption>
+      </figure>
+
+      <p>Veamos el ciclo completo desde que el analista <strong>María</strong> abre su bandeja hasta que el proceso continúa:</p>
+
+      <ol class="pasos">
+        <li>
+          El proceso llegó a <code class="en-linea">Revisión del analista</code> y creó la tarea para el grupo
+          <code class="en-linea">analistas</code>. La instancia está <strong>viva pero suspendida</strong> en ese nodo.
+        </li>
+        <li>
+          María consulta su bandeja para esa instancia y ve la tarea en estado <em>Ready</em>:
+          <div class="codigo">
+            <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">terminal · listar las tareas de la instancia</span></div>
+            <pre><code><span class="cmt"># piId es el id de la instancia de crédito en revisión</span>
+curl <span class="str">"http://localhost:8080/credito/$piId/tasks?user=maria&amp;group=analistas"</span></code></pre>
+          </div>
+        </li>
+        <li>
+          La <strong>reclama</strong> (<code class="en-linea">claim</code>): pasa a <em>Reserved</em> y deja de aparecer en la
+          bandeja del resto de analistas.
+          <div class="codigo">
+            <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">terminal · reclamar (claim)</span></div>
+            <pre><code>curl -X POST \
+  <span class="str">"http://localhost:8080/credito/$piId/revision/$taskId/phases/claim?user=maria&amp;group=analistas"</span></code></pre>
+          </div>
+        </li>
+        <li>
+          Revisa la solicitud (ingresos, historial, monto) y decide. Para terminar, <strong>completa</strong> la tarea
+          enviando su veredicto en el cuerpo JSON. Esos datos de salida vuelven al proceso como variables:
+          <div class="codigo">
+            <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">terminal · completar (complete) con el veredicto</span></div>
+            <pre><code>curl -X POST \
+  <span class="str">"http://localhost:8080/credito/$piId/revision/$taskId?user=maria&amp;group=analistas"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{ "veredicto": "APROBADO", "comentario": "Ingresos suficientes" }'</span></code></pre>
+          </div>
+        </li>
+        <li>
+          La tarea pasa a <em>Completed</em>; el proceso <strong>se reanuda solo</strong>. El gateway posterior lee
+          <code class="en-linea">veredicto</code> y encamina la instancia a <em>Aprobado</em> o <em>Rechazado</em>.
+        </li>
+      </ol>
+
+      <p>La respuesta al completar trae el estado actualizado de las variables de la instancia, ya con el veredicto incorporado:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">respuesta HTTP al completar</span></div>
+        <pre><code><span class="kw">HTTP/1.1</span> <span class="typ">200 OK</span>
+<span class="anot">Content-Type</span>: application/json
+
+{
+  <span class="anot">"id"</span>: <span class="str">"a1b2c3d4-..."</span>,
+  <span class="anot">"solicitante"</span>: <span class="str">"Juan Pérez"</span>,
+  <span class="anot">"monto"</span>: <span class="typ">120000</span>,
+  <span class="anot">"veredicto"</span>: <span class="str">"APROBADO"</span>,
+  <span class="anot">"comentario"</span>: <span class="str">"Ingresos suficientes"</span>
+}</code></pre>
+      </div>
+
+      <div class="aviso ojo">
+        <div class="titulo">⚠️ Ojo</div>
+        <p>
+          Para reclamar o completar una tarea de grupo, el usuario debe pertenecer al grupo de dueños potenciales. Si
+          <code class="en-linea">maria</code> no estuviera en <code class="en-linea">analistas</code>, el motor respondería
+          con un error de autorización (típicamente <code class="en-linea">403 Forbidden</code>). Y si intentas completar una
+          tarea que ya reclamó otra persona, recibirás un conflicto: la tarea ya tiene dueño real.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>La espera está persistida, no “viva”</h2>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>
+          Cuando el proceso se detiene en una tarea humana, ese estado de espera queda <strong>persistido</strong> (por ejemplo,
+          en PostgreSQL si configuraste persistencia, tema que cubre el módulo correspondiente). <strong>No</strong> es un
+          <code class="en-linea">Thread.sleep(...)</code>, ni un hilo bloqueado, ni un objeto retenido en memoria a la espera de
+          algo. La instancia se guarda y el motor la “despierta” cuando llega la operación de la persona. Por eso una tarea puede
+          esperar <strong>días o semanas</strong> sin consumir recursos, y por eso sobrevive a un reinicio de la aplicación: al
+          volver a levantar, las tareas pendientes siguen ahí, exactamente donde quedaron.
+        </p>
+      </div>
+
+      <div class="puente">
+        <p>
+          Compáralo con lo que ya conoces: una llamada <code class="en-linea">@Async</code> o un <code class="en-linea">CompletableFuture</code>
+          viven en memoria y mueren si reinicias la JVM; un <code class="en-linea">@Scheduled</code> dispara a su hora, pero no
+          “recuerda” un trabajo a medio hacer. La espera de una tarea humana es más parecida a una <strong>fila en una tabla con JPA</strong>:
+          un estado <em>duradero</em> que persiste entre reinicios y del que partes para continuar. La diferencia es que aquí ese
+          estado es <strong>todo el proceso</strong>, no un solo registro: dónde va el flujo, qué variables lleva y qué tarea está
+          pendiente, todo guardado y listo para reanudarse.
+        </p>
+      </div>
+
+      <div class="aviso alto">
+        <div class="titulo">⛔ Importante</div>
+        <p>
+          Error común: tratar de “esperar” a una persona dentro de una tarea de script con un bucle o un
+          <code class="en-linea">sleep</code>. Eso bloquea un hilo, no sobrevive a reinicios y no es lo que hace una tarea humana.
+          Si necesitas que el proceso aguarde a un humano, usa una <strong>User Task</strong>: es la pieza diseñada exactamente
+          para suspender el flujo de forma duradera y reanudarlo cuando la persona actúe.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>En resumen</h2>
+      <ul>
+        <li>Una <strong>tarea de usuario</strong> pausa el proceso y lo deja esperando a una persona; el flujo se reanuda al completarla.</li>
+        <li>Sigue el ciclo <strong>WS-HumanTask</strong>: <em>Created → Ready → (claim) Reserved → (start) InProgress → (complete) Completed</em>, con ramas a <em>Aborted</em> / <em>Error</em>.</li>
+        <li>Se <strong>asigna</strong> a un actor o a un grupo (p. ej. <code class="en-linea">analistas</code>); las tareas en <em>Ready</em> llenan la <strong>bandeja</strong> de cada usuario.</li>
+        <li>Kogito <strong>autogenera</strong> los endpoints REST para listar, reclamar, liberar y completar tareas, sin escribir un controlador.</li>
+        <li>La espera está <strong>persistida</strong>: puede durar días y sobrevive a reinicios. No es un hilo vivo ni un <code class="en-linea">sleep</code>.</li>
+      </ul>
+      <p>
+        En el siguiente tema sacamos la lógica de decisión del proceso y la llevamos a su sitio natural: las
+        <strong>reglas de negocio</strong> con DMN y Drools.
+      </p>
+    </section>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="06-gateways-decisiones.html"><div class="dir">← Anterior</div><div class="tit">Gateways y decisiones</div></a>
+    <a href="08-reglas-drools-dmn.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">Reglas de negocio: DMN y Drools</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot · Java 21</span>
+  </footer>
+
+</body>
+</html>

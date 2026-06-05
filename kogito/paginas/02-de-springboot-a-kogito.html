@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<!-- ============================================================
+     Tema 02 — De Spring Boot a Kogito
+     Curso: Procesos de Negocio con Kogito · academyMundial2026
+     ============================================================ -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tema 02 · De Spring Boot a Kogito — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="01-que-es-proceso-negocio.html" class="oculta-movil">← Anterior</a>
+    <a href="03-bpmn-alfabeto.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Tema 02</span>
+    <h1>De Spring Boot a Kogito</h1>
+    <p class="bajada">Kogito no es un servidor nuevo que aprender: es una dependencia Maven más dentro del proyecto Spring Boot que ya dominas. Aquí verás qué es, de dónde viene y cómo encaja con todo lo que ya sabes.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <!-- ============ ¿Qué es Kogito? ============ -->
+    <section class="seccion">
+      <h2>¿Qué es Kogito?</h2>
+      <p><strong>Kogito</strong> es el motor de automatización de negocio <em>cloud-native</em> de la familia <strong>Apache KIE</strong>. Te permite ejecutar dos cosas dentro de una aplicación moderna:</p>
+      <ul>
+        <li><strong>Procesos</strong> descritos en <strong>BPMN 2.0</strong> (el flujo de un pedido, una alta de cliente, una solicitud de crédito…).</li>
+        <li><strong>Decisiones y reglas</strong> descritas en <strong>DMN</strong> o <strong>Drools/DRL</strong> (¿aprobamos este préstamo?, ¿qué descuento aplica?).</li>
+      </ul>
+      <p>El nombre viene del latín <em>cogito</em> («pienso»), con la <strong>K</strong> de <em>Kubernetes</em>: la pista de que su razón de ser es correr ligero y escalar en contenedores. Y aquí está la buena noticia: <strong>Kogito corre sobre Spring Boot o sobre Quarkus</strong>. En este curso usamos Spring Boot, así que sigues en casa.</p>
+
+      <div class="chips">
+        <span class="chip bpmn-tarea">⚙️ Runtime de procesos (BPMN)</span>
+        <span class="chip bpmn-gateway">🧠 Motor de reglas (DMN / Drools)</span>
+        <span class="chip bpmn-evento">☁️ Cloud-native (Kubernetes, nativo)</span>
+        <span class="chip bpmn-flujo">🌱 Sobre Spring Boot o Quarkus</span>
+      </div>
+
+      <div class="puente">
+        <p>Piensa en Kogito como piensas en <strong>Spring Data JPA</strong>: tú no escribes el SQL de cada consulta, declaras una interfaz y el arranque te genera la implementación. En Kogito tú no escribes el <code class="en-linea">@RestController</code> de cada proceso: <strong>dibujas el proceso en un archivo <code class="en-linea">.bpmn</code> y el endpoint REST aparece solo</strong>, generado durante la compilación.</p>
+      </div>
+    </section>
+
+    <!-- ============ De jBPM 7.x a Apache KIE 10.x ============ -->
+    <section class="seccion">
+      <h2>El salto de jBPM 7.x a Apache KIE 10.x</h2>
+      <p>Si ya habías oído hablar de <strong>jBPM</strong>, conviene aclarar cómo cambió el mundo. La generación clásica (jBPM 7.x) giraba en torno a un servidor central llamado <strong>KIE Server</strong>: un monolito al que <em>desplegabas</em> tus procesos empaquetados como artefactos <code class="en-linea">KJAR</code>, y que los <em>interpretaba</em> en tiempo de ejecución a través de una API REST genérica.</p>
+      <p>Apache KIE 10.x —y Kogito como su runtime— le da la vuelta por completo a esa idea:</p>
+
+      <ul>
+        <li><strong>De monolito a microservicio.</strong> En lugar de un servidor gigante que aloja todos los procesos, cada servicio Kogito es <em>tu</em> aplicación, con <em>tus</em> procesos compilados dentro. Escalas el servicio que lo necesita, no el servidor entero.</li>
+        <li><strong>REST específico y autogenerado.</strong> Olvídate de la API genérica del KIE Server con su <code class="en-linea">containerId</code> y su jerga. Un proceso <code class="en-linea">orders</code> expone <code class="en-linea">POST /orders</code>, <code class="en-linea">GET /orders/{id}</code>, etc. Endpoints con nombres de tu dominio.</li>
+        <li><strong>Generación de código en compilación, no interpretación.</strong> Al compilar con Maven, Kogito <em>traduce</em> tus <code class="en-linea">.bpmn</code> y <code class="en-linea">.dmn</code> a clases Java reales. No hay un intérprete leyendo XML en caliente: hay bytecode. Arranca más rápido, gasta menos memoria y permite incluso compilación nativa con GraalVM.</li>
+      </ul>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip mental</div>
+        <p>jBPM 7.x se parecía a desplegar un <em>WAR</em> en un servidor de aplicaciones compartido. Kogito se parece a tu microservicio Spring Boot autocontenido: un <code class="en-linea">java -jar</code> y listo. El motor viaja <em>dentro</em> de tu binario.</p>
+      </div>
+
+      <!-- Diagrama: el cambio de paradigma -->
+      <figure class="diagrama">
+        <svg viewBox="0 0 760 280" role="img" aria-label="Comparación entre el KIE Server monolítico de jBPM 7.x, donde varios KJAR se despliegan en un servidor central, y Kogito, donde cada proceso es un microservicio autocontenido sobre Spring Boot.">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Lado izquierdo: jBPM 7.x monolítico -->
+          <text x="175" y="28" text-anchor="middle" class="svg-texto-b">jBPM 7.x — KIE Server (monolito)</text>
+          <rect x="40" y="48" width="270" height="200" rx="12" class="svg-borde" fill="#fdeeee" stroke="#d64545"></rect>
+          <text x="175" y="72" text-anchor="middle" class="svg-texto">Servidor central que interpreta</text>
+          <rect x="70" y="92" width="90" height="42" rx="8" class="svg-borde svg-relleno"></rect>
+          <text x="115" y="118" text-anchor="middle" class="svg-texto">KJAR A</text>
+          <rect x="190" y="92" width="90" height="42" rx="8" class="svg-borde svg-relleno"></rect>
+          <text x="235" y="118" text-anchor="middle" class="svg-texto">KJAR B</text>
+          <rect x="70" y="150" width="90" height="42" rx="8" class="svg-borde svg-relleno"></rect>
+          <text x="115" y="176" text-anchor="middle" class="svg-texto">KJAR C</text>
+          <rect x="190" y="150" width="90" height="42" rx="8" class="svg-borde svg-relleno"></rect>
+          <text x="235" y="176" text-anchor="middle" class="svg-texto">KJAR D</text>
+          <text x="175" y="222" text-anchor="middle" class="svg-texto">API REST genérica · escala todo junto</text>
+
+          <!-- Flecha de evolución -->
+          <line x1="325" y1="148" x2="430" y2="148" class="svg-flecha"></line>
+          <text x="377" y="138" text-anchor="middle" class="svg-texto">evoluciona</text>
+
+          <!-- Lado derecho: Kogito microservicios -->
+          <text x="585" y="28" text-anchor="middle" class="svg-texto-b">Kogito — microservicios</text>
+          <rect x="445" y="48" width="135" height="86" rx="12" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></rect>
+          <text x="512" y="84" text-anchor="middle" class="svg-texto">Servicio</text>
+          <text x="512" y="102" text-anchor="middle" class="svg-texto-b">/orders</text>
+          <text x="512" y="122" text-anchor="middle" class="svg-texto">Spring Boot</text>
+
+          <rect x="600" y="48" width="135" height="86" rx="12" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></rect>
+          <text x="667" y="84" text-anchor="middle" class="svg-texto">Servicio</text>
+          <text x="667" y="102" text-anchor="middle" class="svg-texto-b">/loans</text>
+          <text x="667" y="122" text-anchor="middle" class="svg-texto">Spring Boot</text>
+
+          <rect x="445" y="150" width="135" height="86" rx="12" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></rect>
+          <text x="512" y="186" text-anchor="middle" class="svg-texto">Servicio</text>
+          <text x="512" y="204" text-anchor="middle" class="svg-texto-b">/onboarding</text>
+          <text x="512" y="224" text-anchor="middle" class="svg-texto">Spring Boot</text>
+
+          <rect x="600" y="150" width="135" height="86" rx="12" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></rect>
+          <text x="667" y="186" text-anchor="middle" class="svg-texto">Servicio</text>
+          <text x="667" y="204" text-anchor="middle" class="svg-texto-b">/claims</text>
+          <text x="667" y="224" text-anchor="middle" class="svg-texto">Spring Boot</text>
+        </svg>
+        <figcaption>Del KIE Server monolítico que interpreta varios <code>KJAR</code>, a un servicio independiente por dominio: cada proceso compilado dentro de su propio Spring Boot y escalable por separado.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============ Arquitectura en capas ============ -->
+    <section class="seccion">
+      <h2>La arquitectura por dentro: capas</h2>
+      <p>Aunque corra dentro de tu Spring Boot, conviene tener un mapa mental de cómo viaja una petición. Cuando llega un HTTP al servicio, atraviesa estas capas:</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 640 430" role="img" aria-label="Arquitectura en capas de un servicio Kogito: el cliente HTTP entra por la API REST autogenerada, que delega en el motor de procesos BPMN y el motor de reglas DMN o Drools, y ambos guardan estado en la capa de persistencia.">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Capa 1: Cliente / HTTP -->
+          <rect x="170" y="20" width="300" height="56" rx="12" class="svg-borde" fill="#e3f0fb" stroke="#004481"></rect>
+          <text x="320" y="44" text-anchor="middle" class="svg-texto-b">Cliente / HTTP</text>
+          <text x="320" y="63" text-anchor="middle" class="svg-texto">navegador · curl · otro microservicio</text>
+
+          <line x1="320" y1="76" x2="320" y2="106" class="svg-flecha"></line>
+
+          <!-- Capa 2: API REST autogenerada -->
+          <rect x="120" y="108" width="400" height="60" rx="12" class="svg-borde" fill="#ddf7f7" stroke="#028484"></rect>
+          <text x="320" y="133" text-anchor="middle" class="svg-texto-b">API REST autogenerada</text>
+          <text x="320" y="152" text-anchor="middle" class="svg-texto">POST /orders · GET /orders/{id} · /tasks · /signal</text>
+
+          <line x1="250" y1="168" x2="195" y2="208" class="svg-flecha"></line>
+          <line x1="390" y1="168" x2="445" y2="208" class="svg-flecha"></line>
+
+          <!-- Capa 3: Motores (dos cajas) -->
+          <rect x="70" y="210" width="220" height="92" rx="12" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></rect>
+          <text x="180" y="238" text-anchor="middle" class="svg-texto-b">Motor de Procesos</text>
+          <text x="180" y="258" text-anchor="middle" class="svg-texto">BPMN 2.0</text>
+          <text x="180" y="282" text-anchor="middle" class="svg-texto">orquesta el flujo y las tareas</text>
+
+          <rect x="350" y="210" width="220" height="92" rx="12" class="svg-borde" fill="#fdf0d5" stroke="#b87900"></rect>
+          <text x="460" y="238" text-anchor="middle" class="svg-texto-b">Motor de Reglas</text>
+          <text x="460" y="258" text-anchor="middle" class="svg-texto">DMN / Drools</text>
+          <text x="460" y="282" text-anchor="middle" class="svg-texto">decide y evalúa condiciones</text>
+
+          <!-- Conexión entre los dos motores (Business Rule Task) -->
+          <line x1="290" y1="256" x2="348" y2="256" class="svg-flecha"></line>
+
+          <line x1="180" y1="302" x2="180" y2="346" class="svg-flecha"></line>
+          <line x1="460" y1="302" x2="460" y2="346" class="svg-flecha"></line>
+
+          <!-- Capa 4: Persistencia -->
+          <rect x="120" y="348" width="400" height="62" rx="12" class="svg-borde" fill="#f5f8fc" stroke="#072146"></rect>
+          <text x="320" y="374" text-anchor="middle" class="svg-texto-b">Persistencia</text>
+          <text x="320" y="394" text-anchor="middle" class="svg-texto">PostgreSQL (JDBC) · MongoDB · estado de las instancias</text>
+        </svg>
+        <figcaption>Una petición entra por la <strong>API REST autogenerada</strong>, el <strong>motor de procesos</strong> orquesta el flujo, invoca al <strong>motor de reglas</strong> cuando hay que decidir, y el estado de cada instancia se guarda en la capa de <strong>persistencia</strong>.</figcaption>
+      </figure>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota</div>
+        <p>La conexión entre el motor de procesos y el de reglas tiene nombre propio en BPMN: una <strong>Business Rule Task</strong>. Es el punto donde el flujo se detiene a preguntar «¿qué decido aquí?» y delega en DMN o Drools. Lo verás a detalle más adelante en el curso.</p>
+      </div>
+    </section>
+
+    <!-- ============ Cómo encaja con lo que ya saben ============ -->
+    <section class="seccion">
+      <h2>Cómo encaja con tu proyecto Spring Boot</h2>
+      <p>Esta es la parte que de verdad importa: <strong>no cambias de tecnología, sumas una capacidad</strong>. Un proyecto Kogito sobre Spring Boot es, literalmente, un proyecto Spring Boot normal con tres ingredientes extra:</p>
+
+      <ol class="pasos">
+        <li><strong>Una dependencia Maven más.</strong> Agregas el <em>starter</em> de Kogito a tu <code class="en-linea">pom.xml</code>, igual que agregaste alguna vez <code class="en-linea">spring-boot-starter-web</code> o <code class="en-linea">spring-boot-starter-data-jpa</code>.</li>
+        <li><strong>Tus procesos como recursos.</strong> Los archivos <code class="en-linea">.bpmn</code> y <code class="en-linea">.dmn</code> viven en <code class="en-linea">src/main/resources</code>, exactamente donde pones tus plantillas, tus <code class="en-linea">.sql</code> o tu <code class="en-linea">application.properties</code>. Son recursos del proyecto.</li>
+        <li><strong>El endpoint aparece solo.</strong> Al compilar, Kogito lee esos recursos y genera el controlador REST. Tú nunca escribes <code class="en-linea">@RestController</code> para arrancar un proceso.</li>
+      </ol>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">pom.xml</span></div>
+        <pre><code><span class="cmt">&lt;!-- El starter de Kogito sobre Spring Boot: procesos + reglas --&gt;</span>
+<span class="kw">&lt;dependency&gt;</span>
+  <span class="kw">&lt;groupId&gt;</span>org.jbpm<span class="kw">&lt;/groupId&gt;</span>
+  <span class="kw">&lt;artifactId&gt;</span>jbpm-with-drools-spring-boot-starter<span class="kw">&lt;/artifactId&gt;</span>
+  <span class="kw">&lt;version&gt;</span>10.2.0<span class="kw">&lt;/version&gt;</span>
+<span class="kw">&lt;/dependency&gt;</span></code></pre>
+      </div>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">Estructura del proyecto</span></div>
+        <pre><code>src/main/
+├─ java/org/acme/        <span class="cmt"># tu código Spring de siempre (@Service, @Component…)</span>
+└─ resources/
+   ├─ orders.bpmn        <span class="cmt"># el proceso → genera POST /orders, GET /orders/{id}…</span>
+   ├─ pricing.dmn        <span class="cmt"># una decisión → invocable desde el proceso</span>
+   └─ application.properties</code></pre>
+      </div>
+
+      <div class="aviso ojo">
+        <div class="titulo">⚠️ Ojo</div>
+        <p>El <code class="en-linea">.bpmn</code> es solo XML, pero <strong>no lo escribes a mano</strong>: lo dibujas con el editor visual BPMN (extensión de VS Code o el editor de la consola). Lo verás en el tema siguiente. Aquí lo importante es entender <em>dónde</em> vive el archivo y <em>qué</em> produce: un endpoint.</p>
+      </div>
+    </section>
+
+    <!-- ============ Tabla comparativa jBPM 7.x vs Apache KIE 10.x ============ -->
+    <section class="seccion">
+      <h2>jBPM 7.x vs Apache KIE 10.x, de un vistazo</h2>
+      <p>Si llegas con experiencia previa en jBPM clásico, esta tabla resume el cambio de mentalidad. Si vienes en limpio, te basta con quedarte con la columna de la derecha.</p>
+
+      <table class="tabla">
+        <thead>
+          <tr><th>Aspecto</th><th>jBPM 7.x (clásico)</th><th>Apache KIE 10.x · Kogito</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Despliegue</strong></td>
+            <td>KIE Server monolítico; desplegabas al servidor</td>
+            <td>Un microservicio por proceso/decisión; <code>java -jar</code></td>
+          </tr>
+          <tr>
+            <td><strong>API REST</strong></td>
+            <td>Genérica del KIE Server (con <code>containerId</code>)</td>
+            <td>Específica del dominio y <strong>autogenerada</strong> (<code>/orders</code>)</td>
+          </tr>
+          <tr>
+            <td><strong>Runtime</strong></td>
+            <td>WildFly / JBoss EAP</td>
+            <td>Spring Boot o Quarkus</td>
+          </tr>
+          <tr>
+            <td><strong>Empaquetado</strong></td>
+            <td><code>KJAR</code> desplegado al servidor e interpretado</td>
+            <td>Compilado dentro del binario de la aplicación</td>
+          </tr>
+          <tr>
+            <td><strong>Ejecución</strong></td>
+            <td>Interpretación del XML en tiempo de ejecución</td>
+            <td>Generación de código en tiempo de compilación</td>
+          </tr>
+          <tr>
+            <td><strong>Autoría</strong></td>
+            <td>Business Central (web) sobre el servidor</td>
+            <td>Editores BPMN/DMN en el IDE; los recursos viven en el repo</td>
+          </tr>
+          <tr>
+            <td><strong>Escalado</strong></td>
+            <td>Escalas el servidor completo</td>
+            <td>Escalas cada servicio por separado (Kubernetes, GraalVM)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="chips">
+        <span class="chip"><span class="pildora rojo">Antes</span> Desplegar al servidor</span>
+        <span class="chip"><span class="pildora verde">Ahora</span> Compilar en tu binario</span>
+        <span class="chip"><span class="pildora rojo">Antes</span> Interpretar XML</span>
+        <span class="chip"><span class="pildora verde">Ahora</span> Generar código</span>
+      </div>
+    </section>
+
+    <!-- ============ PUENTE fuerte: mapa Spring <-> Kogito ============ -->
+    <section class="seccion">
+      <h2>El mapa mental: Spring ⟷ Kogito</h2>
+
+      <div class="puente">
+        <p>Casi todo lo que haces en Kogito tiene un gemelo que ya conoces en Spring. No estás aprendiendo conceptos nuevos desde cero: estás <strong>cambiando quién escribe el código repetitivo</strong>. Antes lo escribías tú con anotaciones; ahora lo deriva el motor a partir del modelo.</p>
+      </div>
+
+      <table class="tabla">
+        <thead>
+          <tr><th>En Spring Boot lo hacías con…</th><th>En Kogito se vuelve…</th><th>Qué cambia para ti</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>@RestController</code> + <code>@PostMapping</code> para iniciar algo</td>
+            <td><strong>Endpoint de proceso autogenerado</strong> a partir del <code>.bpmn</code></td>
+            <td>No escribes el controlador: arranca una instancia con <code>POST /orders</code></td>
+          </tr>
+          <tr>
+            <td><code>@Service</code> con un <code>if/else</code> enorme de lógica de negocio</td>
+            <td><strong>Business Rule Task</strong> que invoca <strong>DMN / Drools</strong></td>
+            <td>Las reglas salen del Java y se vuelven declarativas y auditables</td>
+          </tr>
+          <tr>
+            <td><code>@Repository</code> / JPA para persistir entidades</td>
+            <td><strong>Persistencia del motor</strong> (add-on JDBC sobre PostgreSQL)</td>
+            <td>El estado de cada instancia se guarda solo; no diseñas esas tablas</td>
+          </tr>
+          <tr>
+            <td>Un <code>@Scheduled</code> para reintentos o esperas</td>
+            <td><strong>Timer Event</strong> / <strong>Jobs Service</strong> del proceso</td>
+            <td>Las esperas y plazos forman parte del diagrama, no de tu código</td>
+          </tr>
+          <tr>
+            <td><code>ApplicationEventPublisher</code> / colas para integrar</td>
+            <td><strong>Message / Signal Events</strong> (CloudEvents sobre Kafka)</td>
+            <td>El proceso reacciona a eventos sin que cablees los <em>listeners</em></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ La idea clave</div>
+        <p>En Spring, <strong>tú</strong> eres el orquestador: escribes el método que llama a un servicio, luego a otro, manejas el <code class="en-linea">if</code>, guardas en la base. En Kogito, <strong>el diagrama es el orquestador</strong> y tú aportas las piezas concretas (qué hace cada tarea). El flujo deja de estar escondido entre líneas de Java y se vuelve un mapa que cualquiera puede leer.</p>
+      </div>
+    </section>
+
+    <!-- ============ Spring Boot vs Quarkus ============ -->
+    <section class="seccion">
+      <h2>Una decisión ya tomada: Spring Boot</h2>
+      <p>Kogito ofrece dos <em>runtimes</em> oficiales y equivalentes en capacidades: <strong>Spring Boot</strong> y <strong>Quarkus</strong>. El modelo de procesos, el BPMN, el DMN y la generación de endpoints son idénticos en ambos; cambian sobre todo las dependencias y algún detalle de configuración.</p>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ En este curso usamos Spring Boot</div>
+        <p>Lo elegimos por <strong>continuidad</strong>: ya conoces su ciclo de vida, su <code class="en-linea">application.properties</code>, su <code class="en-linea">spring-boot:run</code>, sus pruebas con JUnit y Mockito. Quarkus es la otra opción válida —brilla en arranque ultrarrápido y compilación nativa con GraalVM— pero aquí no queremos que aprendas dos cosas a la vez. Todo lo que veas se traslada a Quarkus cambiando los <em>starters</em>.</p>
+      </div>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">terminal</span></div>
+        <pre><code><span class="cmt"># Arrancar tu servicio Kogito: el mismo comando de Spring Boot de siempre</span>
+mvn clean compile spring-boot:run
+
+<span class="cmt"># Iniciar una instancia del proceso "orders" (endpoint autogenerado)</span>
+curl -X POST http://localhost:8080/orders \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{ "cliente": "ACME", "total": 1500 }'</span></code></pre>
+      </div>
+
+      <p>Fíjate: no hubo paso de despliegue a ningún servidor, ni un <code class="en-linea">@RestController</code> que escribir. Compilaste, arrancaste y el endpoint del proceso ya estaba ahí, esperando. Ese es, en una frase, el espíritu de Kogito.</p>
+    </section>
+
+    <!-- ============ Cierre ============ -->
+    <section class="seccion">
+      <h2>Lo que te llevas de este tema</h2>
+      <ul>
+        <li><strong>Kogito</strong> es el runtime cloud-native de <strong>Apache KIE</strong> para procesos (BPMN) y decisiones (DMN/Drools), y corre sobre tu Spring Boot.</li>
+        <li>El salto desde <strong>jBPM 7.x</strong> es de monolito a microservicio, de API genérica a <strong>REST autogenerado</strong>, y de interpretar XML a <strong>generar código</strong> en compilación.</li>
+        <li>Integrarlo es agregar <strong>una dependencia Maven</strong> y poner tus <code class="en-linea">.bpmn</code>/<code class="en-linea">.dmn</code> como <strong>recursos</strong>: el endpoint aparece solo.</li>
+        <li>Cada pieza tiene su gemelo en Spring: <strong>endpoint de proceso</strong> ↔ <code class="en-linea">@RestController</code>, <strong>DMN/regla</strong> ↔ <code class="en-linea">@Service</code>, <strong>persistencia del motor</strong> ↔ <code class="en-linea">@Repository</code>/JPA.</li>
+      </ul>
+      <p>En el próximo tema empezamos a leer y escribir el lenguaje de los procesos: <strong>BPMN 2.0, su alfabeto</strong>. Ahí verás de qué están hechos esos archivos <code class="en-linea">.bpmn</code> que tanto mencionamos.</p>
+    </section>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="01-que-es-proceso-negocio.html"><div class="dir">← Anterior</div><div class="tit">¿Qué es un proceso de negocio?</div></a>
+    <a href="03-bpmn-alfabeto.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">BPMN 2.0: el alfabeto</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot · Java 21</span>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tema 09 · Eventos: señales, mensajes y temporizadores — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="08-reglas-drools-dmn.html" class="oculta-movil">← Anterior</a>
+    <a href="10-persistencia-cloud-native.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Tema 09</span>
+    <h1>Eventos: señales, mensajes y temporizadores</h1>
+    <p class="bajada">Hasta ahora tus procesos avanzaban solos, paso a paso. En este tema aprenderás a hacer que un proceso <strong>reaccione a algo que pasa fuera de su control</strong>: un mensaje que llega de Kafka, una señal que difunde otro proceso, un reloj que vence, un error de negocio o la necesidad de deshacer lo ya hecho.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <section class="seccion">
+      <h2>¿Qué es un evento en BPMN?</h2>
+      <p>Un <strong>evento</strong> es <em>algo que sucede</em> durante la vida del proceso y que afecta su flujo. Hasta aquí tus tareas se encadenaban en seco: termina una, empieza la siguiente. Pero la realidad no es tan obediente: el cliente confirma su pago <em>cuando se le da la gana</em>, el banco responde por mensajería, el plazo de revisión <em>vence</em>, una validación <em>falla</em>. Todo eso son eventos, y el proceso necesita <strong>escucharlos</strong> y <strong>reaccionar</strong>.</p>
+
+      <p>Visualmente un evento es siempre un <strong>círculo</strong>. Lo que cambia es <strong>su posición</strong> (cuándo participa) y <strong>su marcador interior</strong> (a qué reacciona). Dominando esas dos dimensiones tienes prácticamente todo el catálogo.</p>
+
+      <div class="chips">
+        <span class="chip bpmn-evento">
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#eefaf2" stroke="#1f9d55" stroke-width="2"></circle></svg>
+          Evento = círculo
+        </span>
+        <span class="chip bpmn-tarea">
+          <svg class="ico" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="3" fill="#eef3f9" stroke="#004481" stroke-width="2"></rect></svg>
+          Tarea = rectángulo redondeado
+        </span>
+        <span class="chip bpmn-gateway">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M12 2 L22 12 L12 22 L2 12 Z" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></path></svg>
+          Gateway = rombo
+        </span>
+        <span class="chip bpmn-flujo">
+          <svg class="ico" viewBox="0 0 24 24"><line x1="3" y1="12" x2="18" y2="12" stroke="#495567" stroke-width="2"></line><path d="M16,8 L22,12 L16,16 Z" fill="#495567"></path></svg>
+          Flujo de secuencia = flecha
+        </span>
+      </div>
+
+      <div class="puente">
+        <p>En Spring tu lógica también «reacciona»: publicas y escuchas con <code class="en-linea">ApplicationEventPublisher</code> y <code class="en-linea">@EventListener</code>, consumes de Kafka con <code class="en-linea">@KafkaListener</code>, y programas tareas con <code class="en-linea">@Scheduled</code>. Todo eso existe, pero está <strong>desperdigado por tu código</strong> y no sabe nada de «en qué punto del trámite estoy». En Kogito, esos mismos disparadores quedan <strong>declarados dentro del proceso</strong>: el motor sabe que esta instancia concreta está esperando justo ese evento, y lo correlaciona por ti.</p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>Dónde puede ir un evento: la posición</h2>
+      <p>La <strong>posición</strong> del círculo en el diagrama dice <em>cuándo</em> entra en juego. Son cuatro lugares, y el borde del círculo cambia para distinguirlos.</p>
+
+      <ul>
+        <li><strong>De inicio</strong> (borde fino): arranca una nueva instancia del proceso. En vez de llamar al endpoint <code class="en-linea">POST /credito</code>, el proceso nace cuando llega un mensaje o una señal.</li>
+        <li><strong>Intermedio de captura</strong> (doble borde, marcador hueco): el flujo <strong>se detiene aquí y espera</strong> a que ocurra algo. Es la pieza estrella de este tema.</li>
+        <li><strong>Intermedio de lanzamiento</strong> (doble borde, marcador relleno): el proceso <strong>produce</strong> el evento (emite un mensaje, difunde una señal) y sigue su camino sin esperar.</li>
+        <li><strong>De fin</strong> (borde grueso): termina ese camino y, de paso, puede lanzar algo (un mensaje de salida, un error, una compensación).</li>
+        <li><strong>De borde</strong> (<em>boundary</em>, pegado al perímetro de una tarea): vigila a esa tarea. Si el evento ocurre <em>mientras la tarea está activa</em>, abre una rama alterna. Es la forma de poner <strong>plazos y manejadores de error</strong> sobre una actividad.</li>
+      </ul>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 880 200" role="img" aria-label="Las cinco posiciones de un evento: inicio con borde fino, intermedio de captura con doble borde hueco, intermedio de lanzamiento con doble borde relleno, de borde sobre una tarea, y de fin con borde grueso">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Inicio -->
+          <circle cx="60" cy="90" r="26" fill="#eefaf2" stroke="#1f9d55" stroke-width="2"></circle>
+          <text x="60" y="150" text-anchor="middle" class="svg-texto">Inicio</text>
+
+          <!-- Intermedio captura (doble borde) -->
+          <circle cx="230" cy="90" r="26" class="svg-relleno" stroke="#004481" stroke-width="2" fill="#eef3f9"></circle>
+          <circle cx="230" cy="90" r="21" fill="none" stroke="#004481" stroke-width="2"></circle>
+          <text x="230" y="150" text-anchor="middle" class="svg-texto">Captura</text>
+
+          <!-- Intermedio lanzamiento (doble borde, marca rellena) -->
+          <circle cx="400" cy="90" r="26" class="svg-relleno" stroke="#004481" stroke-width="2" fill="#eef3f9"></circle>
+          <circle cx="400" cy="90" r="21" fill="none" stroke="#004481" stroke-width="2"></circle>
+          <circle cx="400" cy="90" r="7" fill="#004481"></circle>
+          <text x="400" y="150" text-anchor="middle" class="svg-texto">Lanzamiento</text>
+
+          <!-- Tarea con evento de borde -->
+          <rect x="510" y="64" width="150" height="52" rx="12" class="svg-borde svg-relleno"></rect>
+          <text x="585" y="95" text-anchor="middle" class="svg-texto-b">Tarea</text>
+          <circle cx="660" cy="116" r="16" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></circle>
+          <circle cx="660" cy="116" r="12" fill="none" stroke="#f0a202" stroke-width="2"></circle>
+          <text x="585" y="150" text-anchor="middle" class="svg-texto">De borde</text>
+
+          <!-- Fin -->
+          <circle cx="810" cy="90" r="26" fill="#fde6e6" stroke="#d64545" stroke-width="4"></circle>
+          <text x="810" y="150" text-anchor="middle" class="svg-texto">Fin</text>
+        </svg>
+        <figcaption>Mismo círculo, distinta posición: el grosor y la cantidad de bordes te dicen si el evento arranca, espera, produce, vigila una tarea o termina.</figcaption>
+      </figure>
+
+      <div class="aviso"><div class="titulo">ℹ️ Nota</div><p>La diferencia entre <strong>captura</strong> (marcador hueco) y <strong>lanzamiento</strong> (marcador relleno) es fundamental: capturar es <em>esperar a que ocurra</em>; lanzar es <em>provocar que ocurra</em>. Un mensaje de captura espera a Kafka; un mensaje de lanzamiento publica en Kafka.</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>Los cinco tipos que usarás: el marcador</h2>
+      <p>El <strong>marcador</strong> dibujado dentro del círculo indica <em>a qué</em> reacciona el evento. Estos cinco cubren casi todo lo que vas a necesitar. Mira cada símbolo con cuidado: en cuanto lo reconozcas a primera vista, leerás cualquier diagrama BPMN sin esfuerzo.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 880 170" role="img" aria-label="Los cinco marcadores de evento dibujados dentro de su círculo: sobre para mensaje, triángulo para señal, reloj para temporizador, rayo para error y flecha de rebobinar para compensación">
+          <!-- Mensaje (sobre) -->
+          <circle cx="90" cy="60" r="34" fill="#eef3f9" stroke="#004481" stroke-width="2"></circle>
+          <rect x="70" y="50" width="40" height="26" rx="2" fill="#fff" stroke="#004481" stroke-width="2"></rect>
+          <path d="M70 52 L90 67 L110 52" fill="none" stroke="#004481" stroke-width="2"></path>
+          <text x="90" y="128" text-anchor="middle" class="svg-texto-b">Mensaje</text>
+          <text x="90" y="148" text-anchor="middle" class="svg-texto">sobre</text>
+
+          <!-- Señal (triángulo) -->
+          <circle cx="270" cy="60" r="34" fill="#eef3f9" stroke="#004481" stroke-width="2"></circle>
+          <path d="M270 42 L289 76 L251 76 Z" fill="#fff" stroke="#004481" stroke-width="2" stroke-linejoin="round"></path>
+          <text x="270" y="128" text-anchor="middle" class="svg-texto-b">Señal</text>
+          <text x="270" y="148" text-anchor="middle" class="svg-texto">triángulo</text>
+
+          <!-- Temporizador (reloj) -->
+          <circle cx="450" cy="60" r="34" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></circle>
+          <circle cx="450" cy="60" r="20" fill="#fff" stroke="#b87900" stroke-width="2"></circle>
+          <line x1="450" y1="60" x2="450" y2="46" stroke="#b87900" stroke-width="2.5"></line>
+          <line x1="450" y1="60" x2="461" y2="64" stroke="#b87900" stroke-width="2.5"></line>
+          <text x="450" y="128" text-anchor="middle" class="svg-texto-b">Temporizador</text>
+          <text x="450" y="148" text-anchor="middle" class="svg-texto">reloj</text>
+
+          <!-- Error (rayo) -->
+          <circle cx="630" cy="60" r="34" fill="#fde6e6" stroke="#d64545" stroke-width="2"></circle>
+          <path d="M640 40 L626 58 L636 58 L622 80 L646 56 L636 56 Z" fill="#d64545" stroke="#d64545" stroke-width="1.5" stroke-linejoin="round"></path>
+          <text x="630" y="128" text-anchor="middle" class="svg-texto-b">Error</text>
+          <text x="630" y="148" text-anchor="middle" class="svg-texto">rayo</text>
+
+          <!-- Compensación (rebobinar) -->
+          <circle cx="810" cy="60" r="34" fill="#eef3f9" stroke="#495567" stroke-width="2"></circle>
+          <path d="M810 46 L795 60 L810 74 Z" fill="#495567"></path>
+          <path d="M826 46 L811 60 L826 74 Z" fill="#495567"></path>
+          <text x="810" y="128" text-anchor="middle" class="svg-texto-b">Compensación</text>
+          <text x="810" y="148" text-anchor="middle" class="svg-texto">rebobinar</text>
+        </svg>
+        <figcaption>El marcador interior identifica el tipo. De izquierda a derecha: mensaje (sobre), señal (triángulo), temporizador (reloj), error (rayo) y compensación (doble flecha de rebobinar).</figcaption>
+      </figure>
+
+      <h3>Mensaje (sobre): hablar con el mundo exterior</h3>
+      <p>El evento de <strong>mensaje</strong> es tu puerta de entrada y salida hacia <strong>sistemas externos</strong>. Un mensaje siempre va de <em>un</em> emisor a <em>un</em> destinatario concreto (punto a punto) y, en Kogito, se mapea de forma natural a <strong>Kafka</strong> usando el estándar <strong>CloudEvents</strong>. Un mensaje de captura espera a que llegue del <em>topic</em>; uno de lanzamiento lo publica.</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">application.properties</span></div>
+        <pre><code><span class="cmt"># Cada nodo de mensaje del proceso se asocia a un topic de Kafka.</span>
+<span class="cmt"># El nombre del Message en el BPMN (p. ej. "pagoConfirmado") es la clave del canal.</span>
+mp.messaging.incoming.pagoConfirmado.connector=smallrye-kafka
+mp.messaging.incoming.pagoConfirmado.topic=pagos-confirmados
+mp.messaging.incoming.pagoConfirmado.value.deserializer=org.apache.kafka.common.serialization.StringDeserializer
+
+mp.messaging.outgoing.solicitudBuro.connector=smallrye-kafka
+mp.messaging.outgoing.solicitudBuro.topic=consultas-buro</code></pre>
+      </div>
+
+      <p>El proceso no escribe ni una línea de cliente Kafka: declaras el <em>Message</em> en el nodo del diagrama, lo conectas a un canal en la configuración, y el motor entrega la carga útil (el <code class="en-linea">data</code> del CloudEvent) como variable del proceso, asociándola a <strong>la instancia exacta</strong> que esperaba ese mensaje (correlación).</p>
+
+      <div class="aviso tip"><div class="titulo">✅ Tip</div><p>Para que un mensaje llegue a la instancia correcta entre miles activas, Kogito usa <strong>correlación</strong>: un atributo del CloudEvent (por ejemplo <code class="en-linea">kogitoprocrefid</code> o una clave de negocio que tú definas) identifica a qué instancia despertar. Sin correlación, el motor no sabría a cuál de todas las solicitudes de crédito pertenece ese pago.</p></div>
+
+      <h3>Señal (triángulo): difusión interna</h3>
+      <p>La <strong>señal</strong> es como un grito dentro de tu propia aplicación: a diferencia del mensaje (uno a uno), una señal se <strong>difunde</strong> y la escuchan <em>todas</em> las ramas o instancias que estén esperándola. Sirve para coordinar caminos dentro de un mismo proceso o entre procesos del mismo servicio, sin pasar por infraestructura externa.</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">enviar-senal.sh</span></div>
+        <pre><code><span class="cmt"># Endpoint REST autogenerado para enviar una señal a una instancia concreta.</span>
+<span class="cmt"># {processId} = "credito", {id} = id de la instancia, "Cancelacion" = nombre de la señal.</span>
+POST /credito/{id}/signal/Cancelacion
+Content-Type: application/json
+
+{ <span class="str">"motivo"</span>: <span class="str">"cliente desistió"</span> }</code></pre>
+      </div>
+
+      <h3>Temporizador (reloj): dejar que el tiempo trabaje por ti</h3>
+      <p>El <strong>temporizador</strong> hace que el proceso <strong>espere</strong>. Es el evento que más jugo le sacarás en trámites reales, porque casi todo flujo de negocio tiene plazos. Hay tres maneras de configurarlo, todas con el formato <strong>ISO 8601</strong>:</p>
+
+      <table class="tabla">
+        <thead><tr><th>Modo</th><th>Sintaxis</th><th>Qué hace</th><th>Ejemplo de negocio</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Duración</strong></td><td><code>PT48H</code> · <code>P1D</code> · <code>PT30M</code></td><td>Espera un lapso <em>relativo</em> a cuando se activó el temporizador.</td><td>«Recuérdale al cliente <strong>48 horas</strong> después de enviar la oferta».</td></tr>
+          <tr><td><strong>Fecha</strong></td><td><code>2026-12-31T23:59:59Z</code></td><td>Espera hasta un <em>instante absoluto</em>.</td><td>«Cierra la promoción el <strong>31 de diciembre</strong> a medianoche».</td></tr>
+          <tr><td><strong>Ciclo</strong></td><td><code>R3/PT24H</code></td><td>Se repite N veces cada cierto intervalo (aquí, <strong>3 veces cada 24 h</strong>).</td><td>«Manda hasta <strong>3 recordatorios</strong>, uno por día».</td></tr>
+        </tbody>
+      </table>
+
+      <div class="aviso"><div class="titulo">ℹ️ Recordatorio de ISO 8601</div><p><code class="en-linea">P</code> abre un periodo y <code class="en-linea">T</code> separa la parte de tiempo. Así <code class="en-linea">P1Y2M3DT4H5M</code> es «1 año, 2 meses, 3 días, 4 horas y 5 minutos». Para ciclos, <code class="en-linea">R</code> indica las repeticiones: <code class="en-linea">R/PT10M</code> (infinitas cada 10 min) o <code class="en-linea">R5/P1D</code> (5 veces, una por día).</p></div>
+
+      <h3>Error (rayo): cuando algo de negocio se rompe</h3>
+      <p>El evento de <strong>error</strong> modela fallos <em>de negocio</em> (no excepciones de Java cualquiera): «el monto excede el máximo permitido», «la identidad no pudo verificarse». Una tarea o subproceso <strong>lanza</strong> un error con un código, y un evento de error <strong>lo captura</strong> —típicamente como evento de borde— para encaminar el flujo hacia una rama de manejo. Es el <code class="en-linea">try/catch</code> del proceso, pero dibujado.</p>
+
+      <h3>Compensación (rebobinar): deshacer lo ya hecho</h3>
+      <p>A veces no basta con detenerse: hay que <strong>revertir</strong> algo que ya se ejecutó. La <strong>compensación</strong> es justo eso. Si una tarea «Cobrar tarjeta» ya se completó y luego el trámite se cancela, su tarea de compensación «Reembolsar» deshace el efecto. Es la base del patrón <strong>Saga</strong>: en vez de una transacción ACID que abarque horas o días, defines pasos compensables y, si algo falla al final, el motor ejecuta las compensaciones de los pasos ya completados <strong>en orden inverso</strong>.</p>
+
+      <div class="puente">
+        <p>Esto te sonará: en microservicios no puedes envolver «reservar inventario + cobrar + facturar» en un <code class="en-linea">@Transactional</code>, porque cruzan servicios y duran demasiado. La salida es la <strong>Saga</strong> con acciones compensatorias. Kogito te da ese patrón <em>de fábrica</em>: marcas tareas como compensables y declaras su «deshacer»; el motor orquesta el rollback de negocio sin que escribas el coordinador a mano.</p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>Ejemplo completo: el crédito con plazo de revisión</h2>
+      <p>Retomemos el proceso de crédito. La solicitud llega a una <strong>tarea humana</strong> «Revisar solicitud», asignada a un analista. El problema clásico: ¿y si el analista está saturado y la solicitud se queda ahí tres días? El cliente espera, nadie escala, y el SLA se incumple en silencio.</p>
+
+      <p>La solución es un <strong>evento de borde de tipo temporizador</strong> pegado a la tarea. Mientras la tarea está activa, el reloj corre. Si el analista la atiende a tiempo, el flujo sale por arriba (normal). Pero si pasan <strong>48 horas sin atenderla</strong>, el temporizador <em>dispara</em>: como es <strong>interruptor</strong>, cancela la tarea y desvía el flujo hacia una rama de escalamiento.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 880 320" role="img" aria-label="La tarea humana Revisar solicitud tiene un evento de borde temporizador de 48 horas. Si se atiende a tiempo el flujo continúa a Notificar resultado y termina. Si vencen las 48 horas el temporizador interruptor desvía a la tarea Escalar a supervisor que también puede llevar a cancelar.">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Inicio -->
+          <circle cx="50" cy="110" r="24" fill="#eefaf2" stroke="#1f9d55" stroke-width="2"></circle>
+          <text x="50" y="160" text-anchor="middle" class="svg-texto">Solicitud</text>
+
+          <!-- Tarea humana con boundary timer -->
+          <rect x="150" y="78" width="190" height="64" rx="12" class="svg-borde svg-relleno"></rect>
+          <text x="245" y="106" text-anchor="middle" class="svg-texto-b">Revisar solicitud</text>
+          <text x="245" y="126" text-anchor="middle" class="svg-texto">tarea humana · analista</text>
+
+          <!-- Evento de borde temporizador (interruptor: borde simple) -->
+          <circle cx="340" cy="142" r="17" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></circle>
+          <circle cx="340" cy="142" r="11" fill="#fff" stroke="#b87900" stroke-width="2"></circle>
+          <line x1="340" y1="142" x2="340" y2="135" stroke="#b87900" stroke-width="2"></line>
+          <line x1="340" y1="142" x2="346" y2="145" stroke="#b87900" stroke-width="2"></line>
+          <text x="372" y="180" text-anchor="start" class="svg-texto">PT48H</text>
+
+          <!-- Camino normal: Notificar resultado -->
+          <rect x="440" y="44" width="180" height="52" rx="12" class="svg-borde" fill="#e3f7ec" stroke="#1f9d55"></rect>
+          <text x="530" y="75" text-anchor="middle" class="svg-texto-b">Notificar resultado</text>
+
+          <!-- Fin normal -->
+          <circle cx="720" cy="70" r="24" fill="#eefaf2" stroke="#1f9d55" stroke-width="4"></circle>
+          <text x="720" y="120" text-anchor="middle" class="svg-texto">Resuelto</text>
+
+          <!-- Camino escalamiento: Escalar a supervisor -->
+          <rect x="440" y="200" width="180" height="52" rx="12" class="svg-borde" fill="#fff7e6" stroke="#f0a202"></rect>
+          <text x="530" y="231" text-anchor="middle" class="svg-texto-b">Escalar a supervisor</text>
+
+          <!-- Fin escalado (cancelar) -->
+          <circle cx="720" cy="226" r="24" fill="#fde6e6" stroke="#d64545" stroke-width="4"></circle>
+          <text x="720" y="276" text-anchor="middle" class="svg-texto">Escalado</text>
+
+          <!-- Flechas -->
+          <line x1="74" y1="110" x2="148" y2="110" class="svg-flecha"></line>
+          <!-- normal: tarea -> notificar -->
+          <line x1="340" y1="78" x2="360" y2="70" stroke="#495567" stroke-width="0"></line>
+          <path d="M340 78 C 360 50, 400 70, 438 70" class="svg-flecha"></path>
+          <line x1="620" y1="70" x2="694" y2="70" class="svg-flecha"></line>
+          <!-- timer -> escalar -->
+          <path d="M340 159 C 360 230, 400 226, 438 226" class="svg-flecha"></path>
+          <line x1="620" y1="226" x2="694" y2="226" class="svg-flecha"></line>
+        </svg>
+        <figcaption>Tarea humana «Revisar solicitud» con un evento de borde temporizador (<code>PT48H</code>) interruptor. Si se atiende a tiempo, sale por arriba hacia «Notificar resultado»; si vencen las 48 h, el reloj cancela la tarea y desvía hacia «Escalar a supervisor».</figcaption>
+      </figure>
+
+      <p>En el archivo <code class="en-linea">.bpmn</code> esto es un <code class="en-linea">boundaryEvent</code> con <code class="en-linea">cancelActivity="true"</code> (interruptor) y un <code class="en-linea">timerEventDefinition</code> con la duración. Así se ve el XML que genera el modelador:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">credito.bpmn</span></div>
+        <pre><code><span class="cmt">&lt;!-- Tarea humana a la que se le adjunta el temporizador --&gt;</span>
+<span class="kw">&lt;userTask</span> <span class="typ">id</span>=<span class="str">"revisarSolicitud"</span> <span class="typ">name</span>=<span class="str">"Revisar solicitud"</span><span class="kw">&gt;</span> ... <span class="kw">&lt;/userTask&gt;</span>
+
+<span class="cmt">&lt;!-- Evento de borde: interruptor (cancela la tarea al disparar) --&gt;</span>
+<span class="kw">&lt;boundaryEvent</span> <span class="typ">id</span>=<span class="str">"vencimiento48h"</span>
+               <span class="typ">attachedToRef</span>=<span class="str">"revisarSolicitud"</span>
+               <span class="typ">cancelActivity</span>=<span class="str">"true"</span><span class="kw">&gt;</span>
+  <span class="kw">&lt;timerEventDefinition&gt;</span>
+    <span class="cmt">&lt;!-- 48 horas en ISO 8601 --&gt;</span>
+    <span class="kw">&lt;timeDuration&gt;</span>PT48H<span class="kw">&lt;/timeDuration&gt;</span>
+  <span class="kw">&lt;/timerEventDefinition&gt;</span>
+<span class="kw">&lt;/boundaryEvent&gt;</span></code></pre>
+      </div>
+
+      <div class="aviso ojo"><div class="titulo">⚠️ Interruptor vs. no interruptor</div><p>Un borde <strong>interruptor</strong> (<code class="en-linea">cancelActivity="true"</code>, círculo de borde <em>continuo</em>) cancela la tarea: ya no puede completarse. Un borde <strong>no interruptor</strong> (<code class="en-linea">cancelActivity="false"</code>, círculo de borde <em>punteado</em>) deja la tarea viva y abre una rama <em>en paralelo</em>: ideal para un recordatorio suave («avísale al cliente que seguimos en ello») sin matar la revisión. En nuestro crédito usamos el interruptor porque a las 48 h <em>sí</em> queremos quitarle la tarea al analista y escalar.</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>Tabla de referencia rápida</h2>
+      <p>Tenla a mano: con el tipo, su marcador, su para qué y un ejemplo, tienes resuelto el 90% de tus diagramas.</p>
+
+      <table class="tabla">
+        <thead><tr><th>Tipo</th><th>Marcador</th><th>Para qué sirve</th><th>Ejemplo en el crédito</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Mensaje</strong></td>
+            <td>
+              <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="14" fill="#eef3f9" stroke="#004481" stroke-width="2"></circle><rect x="8" y="12" width="18" height="12" rx="1.5" fill="#fff" stroke="#004481" stroke-width="1.6"></rect><path d="M8 13 L17 20 L26 13" fill="none" stroke="#004481" stroke-width="1.6"></path></svg>
+            </td>
+            <td>Integración punto a punto con el exterior (Kafka / CloudEvents). Capturar = esperar; lanzar = publicar.</td>
+            <td>Recibir <code>pagoConfirmado</code> desde el sistema de pagos.</td>
+          </tr>
+          <tr>
+            <td><strong>Señal</strong></td>
+            <td>
+              <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="14" fill="#eef3f9" stroke="#004481" stroke-width="2"></circle><path d="M17 9 L25 24 L9 24 Z" fill="#fff" stroke="#004481" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+            </td>
+            <td>Difusión interna (uno a muchos) entre ramas o procesos del mismo servicio.</td>
+            <td>Difundir <code>Cancelacion</code> para abortar todas las ramas en curso.</td>
+          </tr>
+          <tr>
+            <td><strong>Temporizador</strong></td>
+            <td>
+              <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="14" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></circle><circle cx="17" cy="17" r="8" fill="#fff" stroke="#b87900" stroke-width="1.6"></circle><line x1="17" y1="17" x2="17" y2="11" stroke="#b87900" stroke-width="2"></line><line x1="17" y1="17" x2="22" y2="19" stroke="#b87900" stroke-width="2"></line></svg>
+            </td>
+            <td>Esperar una duración, una fecha o un ciclo; modelar vencimientos y SLA.</td>
+            <td>Escalar si la revisión no se atiende en <code>PT48H</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Error</strong></td>
+            <td>
+              <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="14" fill="#fde6e6" stroke="#d64545" stroke-width="2"></circle><path d="M22 8 L11 19 L17 19 L13 26 L24 14 L18 14 Z" fill="#d64545" stroke-linejoin="round"></path></svg>
+            </td>
+            <td>Manejo de errores de negocio: lanzar un código y capturarlo para encaminar el fallo.</td>
+            <td>Lanzar <code>IdentidadNoVerificada</code> y derivar a verificación manual.</td>
+          </tr>
+          <tr>
+            <td><strong>Compensación</strong></td>
+            <td>
+              <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="14" fill="#eef3f9" stroke="#495567" stroke-width="2"></circle><path d="M17 10 L10 17 L17 24 Z" fill="#495567"></path><path d="M24 10 L17 17 L24 24 Z" fill="#495567"></path></svg>
+            </td>
+            <td>Deshacer (revertir) un efecto ya producido. Base del patrón Saga.</td>
+            <td>Reembolsar la comisión ya cobrada si se cancela tras aprobar.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="seccion">
+      <h2>Cómo dispararlos y escucharlos en Kogito</h2>
+      <p>Recuerda lo de temas anteriores: <strong>no escribes un <code class="en-linea">@RestController</code> a mano</strong>. El endpoint del proceso se autogenera, y con él también los puntos para enviarle eventos. Estos son los gestos que más usarás.</p>
+
+      <ul class="pasos">
+        <li><strong>Arrancar por mensaje.</strong> Publica un CloudEvent en el <em>topic</em> de inicio: el motor crea una nueva instancia. No hay que llamar a <code class="en-linea">POST /credito</code> manualmente.</li>
+        <li><strong>Despertar una instancia que espera un mensaje.</strong> Llega el CloudEvent al canal entrante; la correlación identifica la instancia y el flujo continúa desde ese evento de captura.</li>
+        <li><strong>Enviar una señal.</strong> <code class="en-linea">POST /credito/{id}/signal/{nombreSeñal}</code> con la carga útil en el cuerpo. Difunde a todas las ramas que escuchen esa señal en esa instancia.</li>
+        <li><strong>Dejar correr un temporizador.</strong> No haces nada: lo gestiona el motor. Cuando vence, dispara solo —incluso si la aplicación se reinició mientras tanto, porque está <strong>persistido</strong>.</li>
+      </ul>
+
+      <div class="puente">
+        <p>Aquí está la diferencia que lo cambia todo. Un <code class="en-linea">@Scheduled(fixedDelay = ...)</code> de Spring vive en memoria: si reinicias el pod, <strong>se pierde la cuenta</strong> y no sabe a qué solicitud pertenecía. El temporizador de Kogito está <strong>atado a la instancia del proceso y persistido</strong> (en base de datos o en un servicio de jobs): sobrevive a reinicios y reprogramaciones, y al vencer despierta <em>exactamente</em> a esa solicitud. Del mismo modo, los mensajes y señales se parecen a tus <code class="en-linea">@KafkaListener</code> y a los eventos de Spring, pero <strong>coordinados por el proceso</strong>: el motor sabe en qué punto del trámite estás y a quién corresponde cada evento. Tú aportas los datos; la orquestación es del proceso.</p>
+      </div>
+
+      <div class="aviso alto"><div class="titulo">⛔ Error común</div><p>Confundir <strong>mensaje</strong> con <strong>señal</strong>. Si necesitas hablar con <em>otro sistema</em> (otro microservicio, una cola, un proveedor externo) es <strong>mensaje</strong> (punto a punto, vía Kafka/CloudEvents). Si solo quieres avisar a <em>otras ramas o procesos dentro de tu misma aplicación</em>, es <strong>señal</strong> (difusión interna). Usar señal para integración externa te deja sin correlación fiable; usar mensaje para coordinación interna te mete infraestructura que no necesitas.</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>Para cerrar</h2>
+      <p>Los eventos son lo que convierte un diagrama rígido en un proceso <strong>vivo y reactivo</strong>. Con cinco marcadores —sobre, triángulo, reloj, rayo y rebobinar— y cuatro posiciones —inicio, captura/lanzamiento intermedio, fin y borde— ya puedes modelar plazos, integraciones, coordinación interna, manejo de errores y compensaciones sin escribir un coordinador a mano.</p>
+
+      <div class="chips">
+        <span class="chip"><span class="pildora azul">Mensaje</span> integración externa (Kafka)</span>
+        <span class="chip"><span class="pildora aqua">Señal</span> difusión interna</span>
+        <span class="chip"><span class="pildora ambar">Temporizador</span> plazos persistentes</span>
+        <span class="chip"><span class="pildora rojo">Error</span> fallo de negocio</span>
+        <span class="chip"><span class="pildora verde">Compensación</span> deshacer (Saga)</span>
+      </div>
+
+      <div class="aviso tip"><div class="titulo">✅ Lo que sigue</div><p>Esos temporizadores que «sobreviven a reinicios» y esas instancias que «recuerdan en qué punto van» dependen de un ingrediente que veremos en el próximo tema: la <strong>persistencia</strong>. Ahí entenderás dónde se guarda el estado del proceso y cómo desplegarlo de forma cloud-native.</p></div>
+    </section>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="08-reglas-drools-dmn.html"><div class="dir">← Anterior</div><div class="tit">Reglas de negocio: DMN y Drools</div></a>
+    <a href="10-persistencia-cloud-native.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">Persistencia y cloud-native</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot</span>
+  </footer>
+
+</body>
+</html>

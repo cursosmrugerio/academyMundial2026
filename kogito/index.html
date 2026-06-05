@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Procesos de Negocio con Kogito — Curso visual</title>
+  <link rel="stylesheet" href="assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior (solo la marca en la portada) -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Curso visual</span>
+    <h1>Procesos de Negocio con Kogito</h1>
+    <p class="bajada">Una ruta visual para aprender a crear <strong>procesos de negocio</strong> con
+      Kogito (Apache KIE) sobre Spring Boot, partiendo de lo que ya dominas: Spring,
+      REST, JUnit, Mockito, Maven y JPA. Cada tema conecta un concepto nuevo de
+      orquestación con algo que ya conoces, hasta que modelar un flujo en BPMN te
+      resulte tan natural como exponer un <code class="en-linea">@RestController</code>.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <section class="seccion">
+      <h2>Cómo está organizado</h2>
+      <p>El curso es una <strong>ruta progresiva</strong>: cada tema se apoya en el anterior y
+        reutiliza lo que ya sabes de Spring Boot. Avanzamos de los <em>conceptos</em> al
+        <em>capstone</em> sin saltos bruscos.</p>
+
+      <div class="chips">
+        <span class="chip"><span class="pildora azul">Conceptos</span></span>
+        <span class="chip"><span class="pildora aqua">BPMN</span></span>
+        <span class="chip"><span class="pildora azul">Datos</span></span>
+        <span class="chip"><span class="pildora ambar">Decisiones</span></span>
+        <span class="chip"><span class="pildora verde">Tareas humanas</span></span>
+        <span class="chip"><span class="pildora aqua">Eventos</span></span>
+        <span class="chip"><span class="pildora azul">Persistencia</span></span>
+        <span class="chip"><span class="pildora verde">Pruebas</span></span>
+        <span class="chip"><span class="pildora rojo">Capstone</span></span>
+      </div>
+
+      <p>En la práctica recorreremos este camino:</p>
+      <ul>
+        <li><strong>Conceptos</strong> (01–02): qué es un proceso de negocio y por qué Kogito encaja en tu mundo Spring.</li>
+        <li><strong>BPMN</strong> (03–04): el alfabeto del modelado y tu primer proceso con su API REST autogenerada.</li>
+        <li><strong>Datos</strong> (05): variables del proceso y cómo viajan entre tareas.</li>
+        <li><strong>Decisiones</strong> (06, 08): gateways para bifurcar el flujo y reglas de negocio con DMN y Drools.</li>
+        <li><strong>Humanos</strong> (07): tareas que requieren la intervención de una persona.</li>
+        <li><strong>Eventos</strong> (09): señales, mensajes y temporizadores que reaccionan al mundo exterior.</li>
+        <li><strong>Persistencia y pruebas</strong> (10–11): arquitectura cloud-native y validación con JUnit y Mockito.</li>
+        <li><strong>Capstone</strong> (12): un proceso completo de aprobación de crédito que integra todo.</li>
+      </ul>
+
+      <div class="puente">
+        <p>Piensa en un proceso de negocio como un <strong>orquestador</strong>: lo que en
+          Spring resolvías encadenando servicios a mano dentro de un <code class="en-linea">@Service</code>,
+          aquí lo describes de forma visual en un diagrama BPMN. Kogito convierte ese
+          diagrama en un servicio ejecutable y te <strong>autogenera el endpoint REST</strong>,
+          sin que escribas un solo <code class="en-linea">@RestController</code>.</p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>Los 12 temas</h2>
+      <p>Puedes seguir el orden recomendado o saltar al tema que necesites. Cada tarjeta te lleva a su página.</p>
+
+      <div class="cuadricula-temas">
+
+        <a class="tema" href="paginas/01-que-es-proceso-negocio.html">
+          <span class="num">01</span>
+          <h3>¿Qué es un proceso de negocio?</h3>
+          <p>El concepto de orquestación de actividades y por qué necesitas algo más que servicios sueltos.</p>
+        </a>
+
+        <a class="tema" href="paginas/02-de-springboot-a-kogito.html">
+          <span class="num">02</span>
+          <h3>De Spring Boot a Kogito</h3>
+          <p>Cómo encaja Kogito en tu proyecto Maven y qué aporta sobre lo que ya construyes con Spring.</p>
+        </a>
+
+        <a class="tema" href="paginas/03-bpmn-alfabeto.html">
+          <span class="num">03</span>
+          <h3>BPMN 2.0: el alfabeto del proceso</h3>
+          <p>Eventos, tareas, gateways y flujos: los símbolos con los que se dibuja cualquier proceso.</p>
+        </a>
+
+        <a class="tema" href="paginas/04-primer-proceso-rest.html">
+          <span class="num">04</span>
+          <h3>Tu primer proceso y su API REST</h3>
+          <p>Modela un flujo sencillo y arráncalo: Kogito te expone el endpoint REST sin escribirlo.</p>
+        </a>
+
+        <a class="tema" href="paginas/05-variables-datos.html">
+          <span class="num">05</span>
+          <h3>Variables y datos del proceso</h3>
+          <p>Define el estado que viaja entre tareas y cómo se mapea a tus POJOs de Java.</p>
+        </a>
+
+        <a class="tema" href="paginas/06-gateways-decisiones.html">
+          <span class="num">06</span>
+          <h3>Gateways: bifurcar y unir el flujo</h3>
+          <p>Caminos exclusivos, paralelos e inclusivos para que el proceso decida por dónde seguir.</p>
+        </a>
+
+        <a class="tema" href="paginas/07-tareas-humanas.html">
+          <span class="num">07</span>
+          <h3>Tareas humanas (Human Tasks)</h3>
+          <p>Pausa el proceso a la espera de que una persona revise, apruebe o complete un dato.</p>
+        </a>
+
+        <a class="tema" href="paginas/08-reglas-drools-dmn.html">
+          <span class="num">08</span>
+          <h3>Reglas de negocio con DMN y Drools</h3>
+          <p>Saca las decisiones del código a tablas y modelos DMN que el negocio puede entender.</p>
+        </a>
+
+        <a class="tema" href="paginas/09-eventos-senales-timers.html">
+          <span class="num">09</span>
+          <h3>Eventos: señales, mensajes y temporizadores</h3>
+          <p>Haz que el proceso reaccione a sucesos externos y al paso del tiempo.</p>
+        </a>
+
+        <a class="tema" href="paginas/10-persistencia-cloud-native.html">
+          <span class="num">10</span>
+          <h3>Persistencia y arquitectura cloud-native</h3>
+          <p>Conserva instancias en ejecución y prepara el servicio para escalar en contenedores.</p>
+        </a>
+
+        <a class="tema" href="paginas/11-testing-proceso.html">
+          <span class="num">11</span>
+          <h3>Probar el proceso: JUnit y Mockito</h3>
+          <p>Verifica caminos, gateways y reglas con las herramientas de prueba que ya usas.</p>
+        </a>
+
+        <a class="tema" href="paginas/12-capstone-aprobacion-credito.html">
+          <span class="num">12</span>
+          <h3>Capstone: proceso de aprobación de crédito</h3>
+          <p>Reúne datos, gateways, reglas, tareas humanas y pruebas en un proceso real de punta a punta.</p>
+        </a>
+
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>El proyecto que iremos construyendo</h2>
+      <p>Todo el curso gira en torno a un proyecto ejecutable de Spring Boot + Kogito que
+        encontrarás listo para abrir y correr.</p>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Proyecto ejecutable</div>
+        <p>En <code class="en-linea">proyecto/aprobacion-credito</code> tienes una aplicación
+          <strong>Spring Boot con Kogito 10.2.0</strong> (Java 21) que implementa el proceso de
+          aprobación de crédito del capstone. Para arrancarlo, sitúate en su carpeta y ejecuta:</p>
+      </div>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">terminal</span></div>
+<pre><code><span class="cmt"># Desde la raíz del proyecto del capstone</span>
+<span class="kw">cd</span> proyecto/aprobacion-credito
+mvn spring-boot:run
+
+<span class="cmt"># El servicio queda escuchando en http://localhost:8080</span>
+<span class="cmt"># El endpoint REST del proceso se autogenera: POST /aprobacionCredito</span></code></pre>
+      </div>
+
+      <div class="aviso ojo">
+        <div class="titulo">⚠️ Requisitos</div>
+        <p>Necesitas <strong>JDK 21</strong> y <strong>Maven 3.9+</strong> instalados. La primera
+          ejecución descargará las dependencias de Kogito y puede tardar unos minutos.</p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>¿List@ para empezar?</h2>
+      <p>Arrancamos por el principio: entender qué es un proceso de negocio y por qué cambia tu forma de orquestar lógica.</p>
+      <p>
+        <a class="tema" href="paginas/01-que-es-proceso-negocio.html" style="max-width:520px">
+          <span class="num">EMPEZAR</span>
+          <h3>Empezar por el Tema 01 →</h3>
+          <p>¿Qué es un proceso de negocio? · Primer paso de la ruta.</p>
+        </a>
+      </p>
+    </section>
+
+  </main>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot · Java 21</span>
+  </footer>
+
+</body>
+</html>

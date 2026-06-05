@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tema 05 · Variables y datos del proceso — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="04-primer-proceso-rest.html" class="oculta-movil">← Anterior</a>
+    <a href="06-gateways-decisiones.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Tema 05</span>
+    <h1>Variables y datos del proceso</h1>
+    <p class="bajada">El proceso no solo describe pasos: también carga consigo un estado que viaja de principio a fin. Aquí aprenderás a definir ese estado, a darle forma con tu propio modelo de dominio y a entender cómo cada tarea lee y escribe sobre él.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Las variables del proceso: el estado que viaja</h2>
+      <p>Cuando arrancas un proceso, el motor crea una <strong>instancia</strong> de ese proceso. Esa instancia necesita recordar cosas mientras avanza: quién hizo la solicitud, cuánto pidió, si ya pasó la validación, cuál fue el resultado. A todo ese conjunto de datos lo llamamos <strong>variables del proceso</strong> (en inglés, <em>process variables</em>).</p>
+      <p>La idea clave: las variables del proceso son <strong>el estado compartido</strong> de la instancia. Se declaran una vez a nivel del proceso y permanecen vivas desde el evento de inicio hasta el evento de fin. Cada tarea puede consultarlas y modificarlas, y el motor se encarga de que ese estado sobreviva incluso si la instancia espera horas o días en una tarea humana.</p>
+
+      <div class="puente">
+        <p>Imagina un <code class="en-linea">SolicitudCredito</code> que vas pasando como parámetro de un método de <em>Service</em> a otro: <code class="en-linea">validar(solicitud)</code>, <code class="en-linea">calcularScore(solicitud)</code>, <code class="en-linea">decidir(solicitud)</code>. En Spring tú eres responsable de pasar ese objeto de mano en mano y de mantenerlo en memoria.</p>
+        <p>En Kogito, ese objeto se declara como <strong>variable del proceso</strong>. El motor lo <strong>persiste</strong> por ti, lo <strong>mapea automáticamente</strong> entre tareas y lo conserva aunque el hilo de ejecución termine y se retome más tarde. Tú solo dices qué lee y qué escribe cada actividad.</p>
+      </div>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota</div>
+        <p>Cada instancia tiene su propia copia de las variables. Si arrancas dos solicitudes de crédito al mismo tiempo, cada una lleva su propio <code class="en-linea">solicitud</code> sin pisarse: son dos instancias independientes con su propio estado.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Tipos de variables: primitivos y objetos de dominio</h2>
+      <p>Una variable del proceso puede ser de dos grandes familias:</p>
+
+      <div class="rejilla cols-2">
+        <div class="tarjeta">
+          <h3>Tipos primitivos y envoltorios</h3>
+          <p>Para datos sueltos y sencillos te apoyas en los tipos básicos de Java:</p>
+          <div class="chips">
+            <span class="chip"><code>String</code></span>
+            <span class="chip"><code>int</code></span>
+            <span class="chip"><code>boolean</code></span>
+            <span class="chip"><code>double</code></span>
+            <span class="chip"><code>Integer</code></span>
+            <span class="chip"><code>BigDecimal</code></span>
+          </div>
+          <p>Útiles para banderas (<code class="en-linea">aprobado</code>), totales (<code class="en-linea">scoreCrediticio</code>) o mensajes (<code class="en-linea">motivoRechazo</code>).</p>
+        </div>
+        <div class="tarjeta">
+          <h3>Objetos Java / POJO</h3>
+          <p>Para representar conceptos del negocio usas tus propias clases: un <em>Plain Old Java Object</em> con sus atributos, igual que los <code class="en-linea">@Entity</code> o los DTO que ya escribes.</p>
+          <p>Aquí entra el modelo central de nuestro proyecto: <code class="en-linea">SolicitudCredito</code>. Una sola variable de tipo objeto agrupa muchos datos relacionados y los hace viajar juntos por el flujo.</p>
+        </div>
+      </div>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>Prefiere un objeto de dominio bien modelado sobre una docena de variables primitivas sueltas. Una variable <code class="en-linea">solicitud</code> de tipo <code class="en-linea">SolicitudCredito</code> es más limpia, más fácil de mapear y reaprovecha la validación y la lógica que ya tienes en tus clases.</p>
+      </div>
+
+      <h3>El modelo de dominio: <code class="en-linea">SolicitudCredito</code></h3>
+      <p>Este POJO será el corazón de los datos que viajan por nuestro proceso de crédito. Es un objeto Java normal y corriente: sin nada propio de Kogito en él. Lo declaramos en el paquete del modelo de tu aplicación Spring Boot.</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">SolicitudCredito.java</span></div>
+        <pre><code><span class="kw">package</span> com.academy.credito.model;
+
+<span class="kw">import</span> java.math.BigDecimal;
+
+<span class="cmt">// POJO de dominio: el "estado" que viajará por el proceso.</span>
+<span class="cmt">// No tiene nada específico de Kogito; es Java puro y serializable.</span>
+<span class="kw">public class</span> <span class="typ">SolicitudCredito</span> {
+
+    <span class="kw">private</span> <span class="typ">String</span> nombre;
+    <span class="kw">private</span> <span class="kw">int</span> edad;
+    <span class="kw">private</span> <span class="typ">BigDecimal</span> ingresosMensuales;
+    <span class="kw">private</span> <span class="typ">BigDecimal</span> montoSolicitado;
+    <span class="kw">private</span> <span class="kw">int</span> plazoMeses;
+    <span class="kw">private</span> <span class="kw">boolean</span> tieneMora;
+
+    <span class="cmt">// Campos que algunas tareas escribirán durante el flujo:</span>
+    <span class="kw">private</span> <span class="kw">int</span> scoreCrediticio;
+    <span class="kw">private</span> <span class="typ">Boolean</span> aprobado;
+    <span class="kw">private</span> <span class="typ">String</span> motivoDecision;
+
+    <span class="kw">public</span> <span class="typ">SolicitudCredito</span>() { } <span class="cmt">// constructor vacío: lo necesita la deserialización</span>
+
+    <span class="cmt">// getters y setters de cada atributo…</span>
+    <span class="kw">public</span> <span class="typ">String</span> <span class="typ">getNombre</span>() { <span class="kw">return</span> nombre; }
+    <span class="kw">public</span> <span class="kw">void</span> <span class="typ">setNombre</span>(<span class="typ">String</span> nombre) { <span class="kw">this</span>.nombre = nombre; }
+
+    <span class="kw">public</span> <span class="typ">BigDecimal</span> <span class="typ">getMontoSolicitado</span>() { <span class="kw">return</span> montoSolicitado; }
+    <span class="kw">public</span> <span class="kw">void</span> <span class="typ">setMontoSolicitado</span>(<span class="typ">BigDecimal</span> m) { <span class="kw">this</span>.montoSolicitado = m; }
+
+    <span class="cmt">// … (resto de getters/setters) …</span>
+}</code></pre>
+      </div>
+
+      <div class="aviso ojo">
+        <div class="titulo">⚠️ Ojo</div>
+        <p>Para que Kogito pueda serializar y persistir tu objeto necesita un <strong>constructor sin argumentos</strong> y <strong>getters/setters</strong> (estilo JavaBean). Es exactamente lo mismo que pide Jackson para convertir desde y hacia JSON. Si te falta el constructor vacío, verás errores de deserialización al iniciar el proceso.</p>
+      </div>
+
+      <div class="puente">
+        <p>¿Te recuerda a algo? Es el mismo POJO que usarías como cuerpo de una petición REST en Spring. Aquí no escribes ningún <code class="en-linea">@RestController</code> ni <code class="en-linea">@RequestBody</code> a mano: Kogito autogenera el endpoint del proceso y usa este objeto como la forma del JSON que entra y sale.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Declarar la variable en el proceso</h2>
+      <p>Dentro del proceso BPMN declaras una variable a nivel de proceso, le das un nombre (<code class="en-linea">solicitud</code>) y le dices su tipo (<code class="en-linea">SolicitudCredito</code>). En el editor visual de Kogito lo haces desde el panel de propiedades del lienzo; por debajo, el archivo <code class="en-linea">.bpmn</code> guarda algo así:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">proceso-credito.bpmn (fragmento)</span></div>
+        <pre><code><span class="cmt">&lt;!-- Tipo del dato: tu POJO de dominio --&gt;</span>
+<span class="kw">&lt;bpmn2:itemDefinition</span> <span class="typ">id</span>=<span class="str">"_solicitudItem"</span>
+                      <span class="typ">structureRef</span>=<span class="str">"com.academy.credito.model.SolicitudCredito"</span><span class="kw">/&gt;</span>
+
+<span class="cmt">&lt;!-- La variable del proceso, con etiquetas de entrada y salida --&gt;</span>
+<span class="kw">&lt;bpmn2:property</span> <span class="typ">id</span>=<span class="str">"solicitud"</span> <span class="typ">itemSubjectRef</span>=<span class="str">"_solicitudItem"</span><span class="kw">&gt;</span>
+  <span class="kw">&lt;bpmn2:extensionElements&gt;</span>
+    <span class="kw">&lt;customTags&gt;</span>input<span class="kw">&lt;/customTags&gt;</span>
+    <span class="kw">&lt;customTags&gt;</span>output<span class="kw">&lt;/customTags&gt;</span>
+  <span class="kw">&lt;/bpmn2:extensionElements&gt;</span>
+<span class="kw">&lt;/bpmn2:property&gt;</span></code></pre>
+      </div>
+
+      <p>Esas <strong>etiquetas</strong> (<em>tags</em>) controlan cómo se comporta la variable frente a la API REST autogenerada. Las que más usarás:</p>
+
+      <table class="tabla">
+        <thead><tr><th>Etiqueta</th><th>Qué hace</th></tr></thead>
+        <tbody>
+          <tr><td><code>input</code></td><td>La variable se expone como <strong>entrada</strong> en el POST inicial. El JSON del cuerpo la rellena.</td></tr>
+          <tr><td><code>output</code></td><td>La variable se incluye en la <strong>respuesta</strong> que devuelve el proceso al completarse.</td></tr>
+          <tr><td><code>required</code></td><td>Debe venir obligatoriamente al iniciar; si falta, la petición se rechaza.</td></tr>
+          <tr><td><code>internal</code></td><td>Variable de uso interno: se <strong>oculta</strong> de la API REST (ni entra ni sale).</td></tr>
+          <tr><td><code>readonly</code></td><td>No puede modificarse una vez inicializada.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>Una misma variable puede ser <code class="en-linea">input</code> <em>y</em> <code class="en-linea">output</code> a la vez. Es justo lo que queremos con <code class="en-linea">solicitud</code>: entra con los datos del cliente y sale enriquecida con el <code class="en-linea">scoreCrediticio</code>, el <code class="en-linea">aprobado</code> y el <code class="en-linea">motivoDecision</code> que las tareas fueron escribiendo.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Data input y data output de cada tarea</h2>
+      <p>Las variables viven a nivel del <strong>proceso</strong>, pero las tareas no operan directamente sobre ellas: cada tarea tiene sus propios <strong>parámetros locales</strong>. El puente entre ambos mundos es el <strong>mapeo de datos</strong>:</p>
+
+      <ul>
+        <li><strong>Data input</strong> (entrada): copia el valor de una variable del proceso hacia un parámetro de la tarea <em>antes</em> de ejecutarla. Es lo que la tarea <strong>lee</strong>.</li>
+        <li><strong>Data output</strong> (salida): copia el resultado de la tarea de vuelta a una variable del proceso <em>después</em> de completarse. Es lo que la tarea <strong>escribe</strong>.</li>
+      </ul>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 560 250" role="img" aria-label="Mapeo de datos entre una variable del proceso y una tarea: entrada y salida">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Variable del proceso -->
+          <rect x="30" y="95" width="150" height="60" rx="8" class="svg-borde" fill="#e3f0fb"></rect>
+          <text x="105" y="120" text-anchor="middle" class="svg-texto-b">Variable</text>
+          <text x="105" y="140" text-anchor="middle" class="svg-texto">solicitud</text>
+
+          <!-- Tarea -->
+          <rect x="370" y="80" width="160" height="90" rx="12" class="svg-borde svg-relleno"></rect>
+          <text x="450" y="110" text-anchor="middle" class="svg-texto-b">Tarea</text>
+          <text x="450" y="132" text-anchor="middle" class="svg-texto">Calcular score</text>
+          <text x="450" y="152" text-anchor="middle" class="svg-texto">crediticio</text>
+
+          <!-- Flecha de entrada (data input) -->
+          <line x1="180" y1="105" x2="368" y2="105" class="svg-flecha"></line>
+          <text x="274" y="95" text-anchor="middle" class="svg-texto" fill="#1f9d55">data input (lee)</text>
+
+          <!-- Flecha de salida (data output) -->
+          <line x1="368" y1="145" x2="182" y2="145" class="svg-flecha"></line>
+          <text x="274" y="170" text-anchor="middle" class="svg-texto" fill="#d6336c">data output (escribe)</text>
+        </svg>
+        <figcaption>El mapeo de datos conecta la variable del proceso con los parámetros locales de la tarea: la entrada la lee, la salida la escribe de vuelta.</figcaption>
+      </figure>
+
+      <p>En el archivo <code class="en-linea">.bpmn</code> el mapeo se ve como asociaciones de origen y destino. No tienes que escribirlo a mano (lo configura el editor), pero conviene reconocerlo:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">Mapeo en el .bpmn (fragmento)</span></div>
+        <pre><code><span class="cmt">&lt;!-- ENTRADA: la variable del proceso -&gt; parámetro de la tarea --&gt;</span>
+<span class="kw">&lt;dataInputAssociation&gt;</span>
+  <span class="kw">&lt;sourceRef&gt;</span>solicitud<span class="kw">&lt;/sourceRef&gt;</span>        <span class="cmt">&lt;!-- variable del proceso --&gt;</span>
+  <span class="kw">&lt;targetRef&gt;</span>_solicitudIn<span class="kw">&lt;/targetRef&gt;</span>      <span class="cmt">&lt;!-- parámetro local de la tarea --&gt;</span>
+<span class="kw">&lt;/dataInputAssociation&gt;</span>
+
+<span class="cmt">&lt;!-- SALIDA: resultado de la tarea -&gt; de vuelta a la variable --&gt;</span>
+<span class="kw">&lt;dataOutputAssociation&gt;</span>
+  <span class="kw">&lt;sourceRef&gt;</span>_solicitudOut<span class="kw">&lt;/sourceRef&gt;</span>     <span class="cmt">&lt;!-- resultado de la tarea --&gt;</span>
+  <span class="kw">&lt;targetRef&gt;</span>solicitud<span class="kw">&lt;/targetRef&gt;</span>        <span class="cmt">&lt;!-- vuelve a la variable del proceso --&gt;</span>
+<span class="kw">&lt;/dataOutputAssociation&gt;</span></code></pre>
+      </div>
+
+      <p>Y la implementación de esa tarea de servicio es simplemente un método de un <em>bean</em> de Spring. Kogito le inyecta lo mapeado como entrada y guarda lo que regresa como salida:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">ScoreService.java</span></div>
+        <pre><code><span class="anot">@Component</span>
+<span class="kw">public class</span> <span class="typ">ScoreService</span> {
+
+    <span class="cmt">// La tarea de servicio invoca este método.</span>
+    <span class="cmt">// Recibe 'solicitud' (data input) y devuelve la versión enriquecida (data output).</span>
+    <span class="kw">public</span> <span class="typ">SolicitudCredito</span> <span class="typ">calcularScore</span>(<span class="typ">SolicitudCredito</span> s) {
+        <span class="kw">int</span> score = <span class="num">700</span>;
+        <span class="kw">if</span> (s.isTieneMora())            score -= <span class="num">250</span>;
+        <span class="kw">if</span> (s.getEdad() &lt; <span class="num">21</span>)            score -= <span class="num">50</span>;
+        <span class="kw">if</span> (s.getIngresosMensuales()
+              .compareTo(s.getMontoSolicitado()) &gt; <span class="num">0</span>) score += <span class="num">80</span>;
+
+        s.setScoreCrediticio(score);
+        <span class="kw">return</span> s; <span class="cmt">// el motor mapea el retorno de vuelta a la variable 'solicitud'</span>
+    }
+}</code></pre>
+      </div>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota</div>
+        <p>Como pasamos el <em>mismo</em> objeto de entrada y lo devolvemos modificado, el cambio en <code class="en-linea">scoreCrediticio</code> se refleja en la variable <code class="en-linea">solicitud</code> del proceso. Las siguientes tareas ya verán ese valor actualizado.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Del JSON del POST a las variables… y de vuelta</h2>
+      <p>Recuerda del tema anterior: el endpoint del proceso <strong>se autogenera</strong>. No escribes el controlador. El nombre del proceso (su <em>id</em>) define la ruta, y las variables etiquetadas con <code class="en-linea">input</code> definen la forma del JSON que recibe.</p>
+
+      <h3>1) El POST inicial llena las variables</h3>
+      <p>Al hacer <code class="en-linea">POST /solicitudesCredito</code> con un cuerpo JSON, Kogito deserializa ese JSON sobre las variables de entrada del proceso. Aquí, el JSON rellena la variable <code class="en-linea">solicitud</code>:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">POST /solicitudesCredito</span></div>
+        <pre><code><span class="cmt"># El cuerpo se mapea sobre la variable de entrada "solicitud"</span>
+{
+  <span class="str">"solicitud"</span>: {
+    <span class="str">"nombre"</span>: <span class="str">"Ana Hernández"</span>,
+    <span class="str">"edad"</span>: <span class="num">34</span>,
+    <span class="str">"ingresosMensuales"</span>: <span class="num">28000</span>,
+    <span class="str">"montoSolicitado"</span>: <span class="num">90000</span>,
+    <span class="str">"plazoMeses"</span>: <span class="num">24</span>,
+    <span class="str">"tieneMora"</span>: <span class="kw">false</span>
+  }
+}</code></pre>
+      </div>
+
+      <h3>2) El proceso corre y las tareas escriben sobre el estado</h3>
+      <p>Mientras la instancia avanza, las tareas leen <code class="en-linea">solicitud</code>, calculan y escriben de vuelta: el <code class="en-linea">scoreCrediticio</code>, la bandera <code class="en-linea">aprobado</code>, el <code class="en-linea">motivoDecision</code>. Todo dentro de la misma variable.</p>
+
+      <h3>3) El resultado final se devuelve</h3>
+      <p>Cuando la instancia llega al evento de fin, Kogito serializa las variables etiquetadas con <code class="en-linea">output</code> y las devuelve en la respuesta. Verás algo así:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">201 Created — respuesta</span></div>
+        <pre><code>{
+  <span class="str">"id"</span>: <span class="str">"a7f3c8e1-2b54-4d9a-9c11-6e0d2f8b4a30"</span>,
+  <span class="str">"solicitud"</span>: {
+    <span class="str">"nombre"</span>: <span class="str">"Ana Hernández"</span>,
+    <span class="str">"edad"</span>: <span class="num">34</span>,
+    <span class="str">"ingresosMensuales"</span>: <span class="num">28000</span>,
+    <span class="str">"montoSolicitado"</span>: <span class="num">90000</span>,
+    <span class="str">"plazoMeses"</span>: <span class="num">24</span>,
+    <span class="str">"tieneMora"</span>: <span class="kw">false</span>,
+    <span class="str">"scoreCrediticio"</span>: <span class="num">780</span>,   <span class="cmt"># lo escribió la tarea de score</span>
+    <span class="str">"aprobado"</span>: <span class="kw">true</span>,           <span class="cmt"># lo escribió la tarea de decisión</span>
+    <span class="str">"motivoDecision"</span>: <span class="str">"Score suficiente y sin mora"</span>
+  }
+}</code></pre>
+      </div>
+
+      <div class="aviso ojo">
+        <div class="titulo">⚠️ Ojo</div>
+        <p>Si una variable <strong>no</strong> lleva la etiqueta <code class="en-linea">output</code>, no aparecerá en la respuesta aunque tenga valor. Y si una variable es <code class="en-linea">internal</code>, ni entra por el JSON ni sale en la respuesta: es de uso exclusivamente interno del flujo.</p>
+      </div>
+
+      <div class="puente">
+        <p>El <code class="en-linea">id</code> que regresa es el identificador de la instancia del proceso, como el <code class="en-linea">Long id</code> autogenerado de una entidad JPA cuando guardas con <code class="en-linea">save()</code>. Con ese <code class="en-linea">id</code> puedes consultar la instancia, completar tareas humanas o abortarla, igual que recuperarías una entidad por su clave con <code class="en-linea">findById()</code>.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>El recorrido completo de <code>solicitud</code></h2>
+      <p>Veamos el panorama completo: la variable <code class="en-linea">solicitud</code> entra por el evento de inicio y va siendo leída y escrita por las tareas a lo largo de todo el flujo, hasta salir por el evento de fin.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 900 320" role="img" aria-label="La variable solicitud entra por el inicio y es leída y escrita por varias tareas a lo largo del flujo de crédito">
+          <defs>
+            <marker id="flechaFlujo" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+            <marker id="flechaIO" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L7,3 L0,6 Z" fill="#1464a5"></path>
+            </marker>
+          </defs>
+
+          <!-- Carril de la variable (banda superior) -->
+          <rect x="20" y="20" width="860" height="46" rx="10" fill="#e3f0fb" stroke="#1464a5" stroke-width="1.5"></rect>
+          <text x="40" y="48" class="svg-texto-b">Variable del proceso:</text>
+          <text x="210" y="48" class="svg-texto" fill="#072146" font-weight="700">solicitud : SolicitudCredito</text>
+          <text x="640" y="48" class="svg-texto" fill="#495567">(estado compartido por toda la instancia)</text>
+
+          <!-- Flujo BPMN (banda inferior) -->
+          <!-- Inicio -->
+          <circle cx="60" cy="210" r="22" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></circle>
+          <text x="60" y="252" text-anchor="middle" class="svg-texto">Inicio</text>
+
+          <!-- Tarea Validar -->
+          <rect x="130" y="186" width="140" height="48" rx="12" class="svg-borde svg-relleno"></rect>
+          <text x="200" y="208" text-anchor="middle" class="svg-texto-b">Validar datos</text>
+          <text x="200" y="225" text-anchor="middle" class="svg-texto" fill="#495567">lee / escribe</text>
+
+          <!-- Tarea Score -->
+          <rect x="330" y="186" width="140" height="48" rx="12" class="svg-borde svg-relleno"></rect>
+          <text x="400" y="208" text-anchor="middle" class="svg-texto-b">Calcular score</text>
+          <text x="400" y="225" text-anchor="middle" class="svg-texto" fill="#495567">lee / escribe</text>
+
+          <!-- Tarea Decidir -->
+          <rect x="530" y="186" width="140" height="48" rx="12" class="svg-borde svg-relleno"></rect>
+          <text x="600" y="208" text-anchor="middle" class="svg-texto-b">Decidir crédito</text>
+          <text x="600" y="225" text-anchor="middle" class="svg-texto" fill="#495567">lee / escribe</text>
+
+          <!-- Fin -->
+          <circle cx="760" cy="210" r="22" class="svg-borde" fill="#fdeeee" stroke="#d64545" stroke-width="3"></circle>
+          <text x="760" y="252" text-anchor="middle" class="svg-texto">Fin</text>
+
+          <!-- Flujo de secuencia -->
+          <line x1="82" y1="210" x2="128" y2="210" stroke="#495567" stroke-width="2" marker-end="url(#flechaFlujo)"></line>
+          <line x1="270" y1="210" x2="328" y2="210" stroke="#495567" stroke-width="2" marker-end="url(#flechaFlujo)"></line>
+          <line x1="470" y1="210" x2="528" y2="210" stroke="#495567" stroke-width="2" marker-end="url(#flechaFlujo)"></line>
+          <line x1="670" y1="210" x2="736" y2="210" stroke="#495567" stroke-width="2" marker-end="url(#flechaFlujo)"></line>
+
+          <!-- Entrada de la variable por el inicio -->
+          <line x1="60" y1="66" x2="60" y2="186" stroke="#1464a5" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#flechaIO)"></line>
+          <text x="70" y="120" class="svg-texto" fill="#1464a5">entra (input)</text>
+
+          <!-- Líneas punteadas: cada tarea accede a la variable -->
+          <line x1="200" y1="186" x2="200" y2="66" stroke="#1464a5" stroke-width="1.4" stroke-dasharray="4,4" marker-end="url(#flechaIO)"></line>
+          <line x1="400" y1="186" x2="400" y2="66" stroke="#1464a5" stroke-width="1.4" stroke-dasharray="4,4" marker-end="url(#flechaIO)"></line>
+          <line x1="600" y1="186" x2="600" y2="66" stroke="#1464a5" stroke-width="1.4" stroke-dasharray="4,4" marker-end="url(#flechaIO)"></line>
+
+          <!-- Salida de la variable por el fin -->
+          <line x1="760" y1="66" x2="760" y2="186" stroke="#1464a5" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#flechaIO)"></line>
+          <text x="770" y="120" class="svg-texto" fill="#1464a5">sale (output)</text>
+        </svg>
+        <figcaption>La variable <em>solicitud</em> entra por el inicio, cada tarea la lee y la escribe (líneas azules punteadas) y al final sale enriquecida por el evento de fin. El estado es uno solo y compartido por toda la instancia.</figcaption>
+      </figure>
+
+      <ol class="pasos">
+        <li><strong>Inicio.</strong> El POST llega; el JSON llena <code class="en-linea">solicitud</code> con los datos del cliente.</li>
+        <li><strong>Validar datos.</strong> Lee <code class="en-linea">solicitud</code>, comprueba reglas básicas (edad mínima, monto positivo) y puede escribir un <code class="en-linea">motivoDecision</code> si algo falla.</li>
+        <li><strong>Calcular score.</strong> Lee <code class="en-linea">solicitud</code> y escribe <code class="en-linea">scoreCrediticio</code>.</li>
+        <li><strong>Decidir crédito.</strong> Lee el <code class="en-linea">scoreCrediticio</code> y <code class="en-linea">tieneMora</code>, y escribe <code class="en-linea">aprobado</code> y <code class="en-linea">motivoDecision</code>.</li>
+        <li><strong>Fin.</strong> Las variables <code class="en-linea">output</code> se serializan y vuelven en la respuesta.</li>
+      </ol>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Tabla de variables del proceso de crédito</h2>
+      <p>En este proyecto trabajamos con <strong>una sola variable de proceso</strong>, <code class="en-linea">solicitud</code>, que es de tipo objeto y agrupa todos los datos. Para que veas el detalle, desglosamos también los <strong>campos</strong> que viajan dentro de ella y en qué dirección fluyen respecto a la API REST:</p>
+
+      <table class="tabla">
+        <thead>
+          <tr><th>Nombre</th><th>Tipo</th><th>Dirección</th><th>Descripción</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>solicitud</code></td>
+            <td><code>SolicitudCredito</code></td>
+            <td><span class="pildora azul">entrada</span> <span class="pildora aqua">salida</span></td>
+            <td>Variable única del proceso. Entra con los datos del cliente y sale enriquecida con el resultado de la evaluación.</td>
+          </tr>
+          <tr>
+            <td><code>solicitud.nombre</code></td>
+            <td><code>String</code></td>
+            <td><span class="pildora azul">entrada</span></td>
+            <td>Nombre del solicitante.</td>
+          </tr>
+          <tr>
+            <td><code>solicitud.edad</code></td>
+            <td><code>int</code></td>
+            <td><span class="pildora azul">entrada</span></td>
+            <td>Edad en años; se usa en la validación y en el score.</td>
+          </tr>
+          <tr>
+            <td><code>solicitud.ingresosMensuales</code></td>
+            <td><code>BigDecimal</code></td>
+            <td><span class="pildora azul">entrada</span></td>
+            <td>Ingreso mensual declarado; clave para evaluar capacidad de pago.</td>
+          </tr>
+          <tr>
+            <td><code>solicitud.montoSolicitado</code></td>
+            <td><code>BigDecimal</code></td>
+            <td><span class="pildora azul">entrada</span></td>
+            <td>Cantidad de crédito que se pide.</td>
+          </tr>
+          <tr>
+            <td><code>solicitud.plazoMeses</code></td>
+            <td><code>int</code></td>
+            <td><span class="pildora azul">entrada</span></td>
+            <td>Plazo en meses para pagar el crédito.</td>
+          </tr>
+          <tr>
+            <td><code>solicitud.tieneMora</code></td>
+            <td><code>boolean</code></td>
+            <td><span class="pildora azul">entrada</span></td>
+            <td>Indica si el solicitante registra mora previa; penaliza el score.</td>
+          </tr>
+          <tr>
+            <td><code>solicitud.scoreCrediticio</code></td>
+            <td><code>int</code></td>
+            <td><span class="pildora aqua">salida</span></td>
+            <td>Lo escribe la tarea <em>Calcular score</em>; base para la decisión.</td>
+          </tr>
+          <tr>
+            <td><code>solicitud.aprobado</code></td>
+            <td><code>Boolean</code></td>
+            <td><span class="pildora aqua">salida</span></td>
+            <td>Resultado de la decisión: aprobado o rechazado.</td>
+          </tr>
+          <tr>
+            <td><code>solicitud.motivoDecision</code></td>
+            <td><code>String</code></td>
+            <td><span class="pildora aqua">salida</span></td>
+            <td>Explicación legible de por qué se aprobó o rechazó.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>Mantén juntos en un mismo objeto los datos de entrada y los de salida cuando representan al mismo concepto del negocio. Así una sola variable <code class="en-linea">solicitud</code> con etiquetas <code class="en-linea">input</code> y <code class="en-linea">output</code> cubre todo el ciclo: menos mapeos, menos ruido y un modelo más fiel al dominio.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Para recordar</h2>
+      <div class="rejilla cols-3">
+        <div class="tarjeta">
+          <span class="pildora azul">Estado</span>
+          <p>Las variables del proceso son el estado compartido de la instancia, vivo del inicio al fin y persistido por el motor.</p>
+        </div>
+        <div class="tarjeta">
+          <span class="pildora aqua">Mapeo</span>
+          <p>Cada tarea lee con <em>data input</em> y escribe con <em>data output</em>. El motor copia los valores por ti.</p>
+        </div>
+        <div class="tarjeta">
+          <span class="pildora verde">REST</span>
+          <p>Las etiquetas <code class="en-linea">input</code> / <code class="en-linea">output</code> deciden qué entra en el POST y qué vuelve en la respuesta.</p>
+        </div>
+      </div>
+
+      <div class="aviso alto">
+        <div class="titulo">⛔ Importante</div>
+        <p>Error común al empezar: olvidar la etiqueta <code class="en-linea">output</code> en la variable y luego sorprenderse de que la respuesta del proceso venga vacía. Si calculaste un <code class="en-linea">scoreCrediticio</code> pero no lo ves al terminar, revisa primero las etiquetas de la variable y el mapeo de salida de la tarea.</p>
+      </div>
+
+      <p>En el siguiente tema usaremos justo estas variables para <strong>tomar decisiones</strong>: dirigir el flujo según el <code class="en-linea">scoreCrediticio</code> y la mora con <em>gateways</em>. El estado que aprendiste a modelar aquí es lo que alimenta esas bifurcaciones.</p>
+    </section>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="04-primer-proceso-rest.html"><div class="dir">← Anterior</div><div class="tit">Tu primer proceso y su API REST</div></a>
+    <a href="06-gateways-decisiones.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">Gateways y decisiones</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot</span>
+  </footer>
+
+</body>
+</html>

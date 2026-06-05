@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.academy.kogito</groupId>
+    <artifactId>aprobacion-credito</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>Aprobacion de Credito</name>
+    <description>Servicio Kogito (Spring Boot) de aprobacion de credito: proceso BPMN + decision DMN</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>21</maven.compiler.release>
+        <java.version>21</java.version>
+
+        <!-- Versiones de la plataforma KIE / Kogito y Spring Boot (alineadas a Kogito 10.2.0) -->
+        <kogito.version>10.2.0</kogito.version>
+        <spring-boot.version>3.5.10</spring-boot.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- BOM de Spring Boot: alinea Spring Boot 3.5.10 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- BOM de Kogito para Spring Boot: alinea Spring Boot/Spring Cloud y gestiona el plugin -->
+            <dependency>
+                <groupId>org.kie.kogito</groupId>
+                <artifactId>kogito-spring-boot-bom</artifactId>
+                <version>${kogito.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Starter all-in-one: PROCESOS (BPMN) + REGLAS (DRL) + DECISIONES (DMN) + PMML.
+             Arrastra drools-decisions-spring-boot-starter, que aporta el motor DMN. -->
+        <dependency>
+            <groupId>org.jbpm</groupId>
+            <artifactId>jbpm-with-drools-spring-boot-starter</artifactId>
+            <version>${kogito.version}</version>
+        </dependency>
+
+        <!-- Add-on de gestion de procesos: endpoints REST de administracion de instancias -->
+        <dependency>
+            <groupId>org.kie</groupId>
+            <artifactId>kie-addons-springboot-process-management</artifactId>
+            <version>${kogito.version}</version>
+        </dependency>
+
+        <!-- Spring Boot Web (servidor embebido) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Pruebas -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Plugin de codegen de Kogito: genera endpoints REST a partir de BPMN/DMN en tiempo de compilacion -->
+            <plugin>
+                <groupId>org.kie.kogito</groupId>
+                <artifactId>kogito-maven-plugin</artifactId>
+                <version>${kogito.version}</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generateModel</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Empaquetado ejecutable Spring Boot -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring-boot.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

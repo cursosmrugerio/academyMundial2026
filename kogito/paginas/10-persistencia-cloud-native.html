@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tema 10 · Persistencia y arquitectura cloud-native — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="09-eventos-senales-timers.html" class="oculta-movil">← Anterior</a>
+    <a href="11-testing-proceso.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Tema 10</span>
+    <h1>Persistencia y arquitectura cloud-native</h1>
+    <p class="bajada">Hasta ahora tus instancias de proceso vivían en memoria — perfecto para clase. En producción necesitas que sobrevivan a un reinicio: ¿en qué paso quedó cada pedido si el contenedor se cae a las 3 de la mañana? Aquí elegirás el motor de persistencia y conocerás las piezas cloud-native que rodean a tu servicio Kogito.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <section class="seccion">
+      <h2>El estado vive en memoria… hasta que reinicias</h2>
+      <p>Cuando arrancas un servicio Kogito recién generado, el <strong>estado de cada instancia de proceso</strong> (en qué nodo va, qué valen sus variables, qué tareas humanas están abiertas, qué temporizadores están armados) se guarda en un mapa <strong>en memoria</strong>. Es la opción por defecto y es <em>excelente</em> para desarrollar y para las pruebas de JUnit: cero infraestructura, arranque instantáneo, todo se limpia entre pruebas.</p>
+
+      <p>El problema aparece el día que tu proceso dura más que el proceso del sistema operativo. Un préstamo que espera la aprobación de un humano puede tardar <strong>tres días</strong>. Un pedido que espera el pago externo, varias horas. Si entre tanto despliegas una versión nueva, escalas a otra réplica o simplemente se reinicia el <em>pod</em>… ese estado en memoria <strong>se evapora</strong>, y con él todas las instancias en vuelo.</p>
+
+      <div class="puente">
+        <p>Piénsalo como la diferencia entre un <code class="en-linea">@Bean</code> con estado en memoria y una entidad <code class="en-linea">@Entity</code> en la base de datos. El primero es rápido pero volátil; el segundo sobrevive al reinicio del servidor. La <strong>persistencia del proceso</strong> es exactamente eso: convertir el estado volátil de cada instancia en algo durable, igual que tu JPA convierte objetos en filas.</p>
+      </div>
+
+      <div class="aviso"><div class="titulo">ℹ️ Nota</div><p>El estado en memoria <strong>no</strong> es un error de configuración: es una decisión deliberada para que el desarrollo sea ligero. Activar persistencia es un paso consciente que das cuando llevas el servicio a un entorno donde los reinicios son normales.</p></div>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 760 230" role="img" aria-label="Una instancia de proceso detenida en una tarea humana se pierde al reiniciar si está en memoria, pero sobrevive si está persistida">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Fila superior: en memoria -->
+          <text x="20" y="30" class="svg-texto-b">Estado en memoria</text>
+          <circle cx="60" cy="75" r="18" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></circle>
+          <rect x="110" y="55" width="120" height="40" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="170" y="80" text-anchor="middle" class="svg-texto">Esperando humano</text>
+          <line x1="78" y1="75" x2="108" y2="75" class="svg-flecha"></line>
+
+          <!-- reinicio -->
+          <text x="300" y="60" text-anchor="middle" class="svg-texto-b" fill="#d64545">⟳ reinicio</text>
+          <line x1="232" y1="75" x2="360" y2="75" class="svg-flecha" stroke="#d64545"></line>
+          <text x="500" y="80" text-anchor="middle" class="svg-texto-b" fill="#d64545">💨 instancia perdida</text>
+
+          <!-- Fila inferior: persistido -->
+          <text x="20" y="155" class="svg-texto-b">Estado persistido</text>
+          <circle cx="60" cy="195" r="18" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></circle>
+          <rect x="110" y="175" width="120" height="40" rx="10" class="svg-borde svg-relleno"></rect>
+          <text x="170" y="200" text-anchor="middle" class="svg-texto">Esperando humano</text>
+          <line x1="78" y1="195" x2="108" y2="195" class="svg-flecha"></line>
+
+          <line x1="232" y1="195" x2="360" y2="195" class="svg-flecha" stroke="#1f9d55"></line>
+          <text x="300" y="180" text-anchor="middle" class="svg-texto-b" fill="#1f9d55">⟳ reinicio</text>
+          <rect x="365" y="170" width="90" height="50" rx="8" class="svg-borde" fill="#e3f0fb" stroke="#1464a5"></rect>
+          <text x="410" y="200" text-anchor="middle" class="svg-texto">BD</text>
+          <line x1="455" y1="195" x2="540" y2="195" class="svg-flecha" stroke="#1f9d55"></line>
+          <rect x="545" y="175" width="195" height="40" rx="10" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></rect>
+          <text x="642" y="200" text-anchor="middle" class="svg-texto">Sigue en su paso</text>
+        </svg>
+        <figcaption>La misma instancia detenida en una tarea humana: en memoria se pierde con el reinicio; persistida se rehidrata desde la base de datos y continúa donde se quedó.</figcaption>
+      </figure>
+    </section>
+
+    <section class="seccion">
+      <h2>Cómo se activa la persistencia: por configuración, no por código</h2>
+      <p>Aquí está la buena noticia para quien viene de Spring: <strong>tú no escribes el código de persistencia del proceso</strong>. No hay un <code class="en-linea">ProcessInstanceRepository</code> que debas implementar, ni un mapeo de entidades, ni transacciones que coordinar a mano. El motor de Kogito ya sabe serializar y rehidratar el estado; tú solo le dices <em>dónde</em> guardarlo.</p>
+
+      <p>El mecanismo tiene dos partes:</p>
+      <ol>
+        <li>Agregas el <strong>add-on de persistencia</strong> correspondiente como dependencia de Maven (uno por motor).</li>
+        <li>Configuras el destino en <code class="en-linea">application.properties</code> — el mismo archivo donde ya defines tu <code class="en-linea">datasource</code> de Spring.</li>
+      </ol>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">pom.xml</span></div>
+        <pre><code><span class="cmt">&lt;!-- Add-on de persistencia JDBC para Spring Boot --&gt;</span>
+<span class="kw">&lt;dependency&gt;</span>
+  <span class="kw">&lt;groupId&gt;</span>org.jbpm<span class="kw">&lt;/groupId&gt;</span>
+  <span class="kw">&lt;artifactId&gt;</span>jbpm-addons-springboot-persistence-jdbc<span class="kw">&lt;/artifactId&gt;</span>
+<span class="kw">&lt;/dependency&gt;</span>
+
+<span class="cmt">&lt;!-- El driver de la base que ya conoces de Spring Data JPA --&gt;</span>
+<span class="kw">&lt;dependency&gt;</span>
+  <span class="kw">&lt;groupId&gt;</span>org.postgresql<span class="kw">&lt;/groupId&gt;</span>
+  <span class="kw">&lt;artifactId&gt;</span>postgresql<span class="kw">&lt;/artifactId&gt;</span>
+<span class="kw">&lt;/dependency&gt;</span></code></pre>
+      </div>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">application.properties</span></div>
+        <pre><code><span class="cmt"># El mismo datasource de Spring que ya configuras para JPA</span>
+spring.datasource.url=jdbc:postgresql://localhost:5432/kogito
+spring.datasource.username=kogito
+spring.datasource.password=kogito
+
+<span class="cmt"># Activa la persistencia del estado de los procesos</span>
+kogito.persistence.type=jdbc
+
+<span class="cmt"># Deja que Flyway/Liquibase cree las tablas del motor al arrancar</span>
+kie.flyway.enabled=true</code></pre>
+      </div>
+
+      <div class="puente">
+        <p>¿Reconoces ese <code class="en-linea">spring.datasource.url</code>? Es <strong>la misma propiedad</strong> que usas en cualquier app de Spring Data JPA. Cambiar el motor de persistencia del proceso es, literalmente, cambiar el <em>datasource</em>: apuntas a Postgres, a otra instancia o a Mongo, sin tocar ni una línea de Java. El motor gestiona sus propias tablas; tú gestionas la conexión.</p>
+      </div>
+
+      <div class="aviso tip"><div class="titulo">✅ Tip</div><p>Puedes <strong>compartir el mismo datasource</strong> entre tus entidades JPA de negocio y la persistencia del proceso, o separarlos en bases distintas. Para empezar, compartir es lo más simple; sepáralos cuando quieras escalar o respaldar cada cosa por su cuenta.</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>Los backends de persistencia</h2>
+      <p>Kogito no te ata a un único almacén. Eliges el que mejor encaje con tu plataforma y con lo que tu equipo ya opera. Estos son los principales:</p>
+
+      <h3>PostgreSQL / JDBC</h3>
+      <p>La opción más usada y la recomendada para la mayoría de los casos. Si tu equipo ya opera PostgreSQL para las entidades de negocio (lo que viste en el <strong>Módulo 6</strong> con Spring Data JPA y bases relacionales), reutilizas la misma infraestructura, los mismos respaldos y las mismas herramientas de monitoreo. El estado se guarda en tablas que el motor administra por ti.</p>
+
+      <h3>MongoDB</h3>
+      <p>Si tu organización es de mundo documental (también visto en el <strong>Módulo 6</strong>), Kogito persiste el estado como documentos. Encaja bien cuando ya tienes un clúster de Mongo operado y quieres evitar introducir un motor relacional solo para los procesos.</p>
+
+      <h3>Infinispan</h3>
+      <p>Un almacén clave-valor distribuido en memoria (con respaldo durable), pensado para alta velocidad y despliegues en malla de datos. Es una opción válida en 10.2.0, aunque el foco de la comunidad está hoy en PostgreSQL y MongoDB; elígelo si ya operas Infinispan/Data Grid y necesitas latencias muy bajas.</p>
+
+      <table class="tabla">
+        <thead><tr><th>Motor</th><th>Cómo se configura</th><th>Cuándo elegirlo</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>PostgreSQL / JDBC</strong><br><span class="pildora azul">recomendado</span></td>
+            <td>Add-on <code>...persistence-jdbc</code> + driver + <code>spring.datasource.url</code> y <code>kogito.persistence.type=jdbc</code></td>
+            <td>Caso general. Ya operas SQL, quieres respaldos y consultas relacionales conocidas. Reaprovechas lo del Módulo 6.</td>
+          </tr>
+          <tr>
+            <td><strong>MongoDB</strong></td>
+            <td>Add-on <code>...persistence-mongodb</code> + <code>spring.data.mongodb.uri</code> y <code>kogito.persistence.type=mongodb</code></td>
+            <td>Tu plataforma es documental y ya operas un clúster de Mongo. Evitas meter un motor relacional aparte.</td>
+          </tr>
+          <tr>
+            <td><strong>Infinispan</strong></td>
+            <td>Add-on <code>...persistence-infinispan</code> + hosts del clúster y <code>kogito.persistence.type=infinispan</code></td>
+            <td>Necesitas latencia muy baja y ya operas una malla de datos en memoria.</td>
+          </tr>
+          <tr>
+            <td><strong>En memoria</strong><br><span class="pildora aqua">por defecto</span></td>
+            <td>Sin add-on. Es el comportamiento de fábrica.</td>
+            <td>Desarrollo local y pruebas de JUnit. <strong>Nunca</strong> en producción para procesos de larga vida.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="aviso ojo"><div class="titulo">⚠️ Ojo</div><p>El add-on de persistencia guarda el <strong>estado del proceso</strong>, que es distinto de tus datos de negocio. Si tu proceso tiene una variable <code class="en-linea">pedido</code> que también persistes como <code class="en-linea">@Entity</code> con JPA, tienes dos representaciones: la del negocio (tus tablas) y la del motor (su estado serializado). No son la misma fila; coordínalas a través de las variables del proceso.</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>Bloqueo optimista: concurrencia sin dramas</h2>
+      <p>Cuando varias réplicas de tu servicio comparten la misma base, dos peticiones podrían intentar avanzar la <em>misma</em> instancia al mismo tiempo (por ejemplo, dos clics de "Aprobar"). Kogito usa <strong>bloqueo optimista</strong>: cada instancia lleva un número de versión que el motor revisa antes de guardar. Si alguien ya la modificó, la segunda escritura falla con un conflicto en lugar de pisar el cambio.</p>
+
+      <div class="puente">
+        <p>Es exactamente la anotación <code class="en-linea">@Version</code> de JPA. La conoces: una columna que se incrementa en cada actualización y dispara <code class="en-linea">OptimisticLockException</code> si dos transacciones chocan. Aquí el motor la gestiona por ti sobre el estado del proceso — misma idea, mismo beneficio: nada de bloqueos largos, detección de conflictos en el commit.</p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>El ecosistema cloud-native alrededor del servicio</h2>
+      <p>Persistir el estado resuelve "que no se pierda". Pero en producción quieres más: <strong>consultar</strong> qué instancias hay activas, <strong>operar</strong> tareas humanas desde una bandeja y que los <strong>temporizadores</strong> disparen aunque tu servicio esté apagado en ese instante. Para eso, el ecosistema de Kogito ofrece tres servicios complementarios que despliegas por separado.</p>
+
+      <div class="rejilla cols-3">
+        <div class="tarjeta">
+          <h3>Data Index</h3>
+          <p>Indexa los eventos que emiten tus servicios y expone un <strong>endpoint GraphQL</strong> para consultar procesos y tareas: «dame todas las instancias activas del proceso <code>pedidos</code> con monto &gt; 1000». No interrumpe a tu servicio: escucha eventos por Kafka y arma su propia vista de solo lectura.</p>
+        </div>
+        <div class="tarjeta">
+          <h3>Jobs Service</h3>
+          <p>Programa y dispara <strong>temporizadores persistentes</strong>. En vez de mantener un <code>Timer</code> en la memoria de tu servicio, registra el vencimiento aquí; cuando llega la hora, el Jobs Service llama de vuelta a tu proceso por HTTP. Sobrevive a reinicios.</p>
+        </div>
+        <div class="tarjeta">
+          <h3>Management Console</h3>
+          <p>Una interfaz web para <strong>monitorear y operar</strong>: ver instancias activas/completadas/abortadas, abortar o reintentar nodos fallidos y atender la <strong>bandeja de tareas humanas</strong> con sus formularios. Se alimenta del GraphQL del Data Index.</p>
+        </div>
+      </div>
+
+      <div class="puente">
+        <p>El Data Index es como tener un <strong>read model</strong> de CQRS listo para usar: una proyección de solo lectura, optimizada para consultas, separada del modelo que ejecuta los comandos. Tú ya separas a veces lectura y escritura en Spring; aquí viene de fábrica y se llena solo con los eventos del proceso.</p>
+      </div>
+
+      <div class="aviso ojo"><div class="titulo">⚠️ Ojo — el Jobs Service es singleton</div><p>El Jobs Service está pensado como una <strong>instancia única</strong> (singleton): es el reloj central que decide cuándo dispara cada temporizador, y no debe haber dos relojes compitiendo por el mismo trabajo. <strong>No lo escales horizontalmente</strong> como harías con tu servicio de negocio. Planifica su capacidad (CPU, memoria y su base de datos de <em>jobs</em>) para que aguante el volumen de temporizadores activos, y respáldalo con persistencia para que no olvide vencimientos al reiniciar.</p></div>
+
+      <div class="aviso"><div class="titulo">ℹ️ Nota — separa responsabilidades</div><p>Tu servicio de negocio sí escala a N réplicas detrás de la base persistida; el Data Index y el Management Console también pueden replicarse para alta disponibilidad. El Jobs Service es la excepción: uno solo, bien dimensionado.</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>La arquitectura desplegada, de un vistazo</h2>
+      <p>Así se ve un despliegue típico en contenedores sobre Kubernetes. Tu servicio Kogito (Spring Boot) persiste su estado en PostgreSQL, emite eventos como <strong>CloudEvents</strong> hacia Kafka, y esos eventos alimentan al Data Index, que a su vez surte de datos al Management Console. El Jobs Service, único, programa los temporizadores y los devuelve por HTTP. Las APIs entre piezas viajan por HTTP/HTTPS.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 820 470" role="img" aria-label="Arquitectura desplegada: servicio Kogito Spring Boot conectado a PostgreSQL, Kafka, Data Index, Management Console y Jobs Service sobre Kubernetes">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+            <marker id="flecha-aqua" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#028484"></path>
+            </marker>
+          </defs>
+
+          <!-- Marco Kubernetes -->
+          <rect x="12" y="12" width="796" height="446" rx="14" fill="none" stroke="#49a5e6" stroke-width="2" stroke-dasharray="8 6"></rect>
+          <text x="32" y="38" class="svg-texto-b" fill="#1464a5">☸ Kubernetes · contenedores</text>
+
+          <!-- Servicio Kogito (central) -->
+          <rect x="305" y="70" width="210" height="74" rx="12" class="svg-borde" fill="#e3f0fb" stroke="#004481" stroke-width="2.5"></rect>
+          <text x="410" y="100" text-anchor="middle" class="svg-texto-b">Servicio Kogito</text>
+          <text x="410" y="122" text-anchor="middle" class="svg-texto">Spring Boot · Java 21</text>
+
+          <!-- PostgreSQL -->
+          <rect x="60" y="200" width="160" height="64" rx="10" class="svg-borde" fill="#eef3f9" stroke="#1464a5"></rect>
+          <text x="140" y="228" text-anchor="middle" class="svg-texto-b">PostgreSQL</text>
+          <text x="140" y="248" text-anchor="middle" class="svg-texto">estado del proceso</text>
+          <line x1="320" y1="144" x2="180" y2="198" class="svg-flecha"></line>
+          <text x="205" y="180" text-anchor="middle" class="svg-texto" fill="#495567">JDBC</text>
+
+          <!-- Jobs Service -->
+          <rect x="600" y="200" width="170" height="64" rx="10" class="svg-borde" fill="#fff7e6" stroke="#f0a202"></rect>
+          <text x="685" y="223" text-anchor="middle" class="svg-texto-b" fill="#b87900">Jobs Service</text>
+          <text x="685" y="243" text-anchor="middle" class="svg-texto">temporizadores</text>
+          <text x="685" y="259" text-anchor="middle" class="svg-texto" fill="#b87900">★ singleton</text>
+          <line x1="500" y1="144" x2="640" y2="198" class="svg-flecha"></line>
+          <line x1="660" y1="198" x2="520" y2="146" class="svg-flecha"></line>
+          <text x="615" y="178" text-anchor="middle" class="svg-texto" fill="#495567">HTTP</text>
+
+          <!-- Kafka -->
+          <rect x="320" y="200" width="180" height="64" rx="10" class="svg-borde" fill="#ddf7f7" stroke="#028484"></rect>
+          <text x="410" y="228" text-anchor="middle" class="svg-texto-b" fill="#028484">Kafka</text>
+          <text x="410" y="248" text-anchor="middle" class="svg-texto">CloudEvents</text>
+          <line x1="410" y1="144" x2="410" y2="198" class="svg-flecha" stroke="#028484" marker-end="url(#flecha-aqua)"></line>
+
+          <!-- Data Index -->
+          <rect x="245" y="330" width="190" height="68" rx="10" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></rect>
+          <text x="340" y="358" text-anchor="middle" class="svg-texto-b" fill="#1f9d55">Data Index</text>
+          <text x="340" y="378" text-anchor="middle" class="svg-texto">GraphQL · consultas</text>
+          <line x1="400" y1="264" x2="360" y2="328" class="svg-flecha" stroke="#028484" marker-end="url(#flecha-aqua)"></line>
+
+          <!-- Management Console -->
+          <rect x="500" y="330" width="200" height="68" rx="10" class="svg-borde" fill="#fde6f0" stroke="#d6336c"></rect>
+          <text x="600" y="358" text-anchor="middle" class="svg-texto-b" fill="#d6336c">Management Console</text>
+          <text x="600" y="378" text-anchor="middle" class="svg-texto">monitoreo · tareas</text>
+          <line x1="435" y1="364" x2="498" y2="364" class="svg-flecha"></line>
+          <text x="467" y="354" text-anchor="middle" class="svg-texto" fill="#495567">HTTP/S</text>
+          <text x="467" y="392" text-anchor="middle" class="svg-texto" fill="#495567">GraphQL</text>
+
+          <!-- DataIndex DB -->
+          <rect x="60" y="330" width="150" height="68" rx="10" class="svg-borde" fill="#eef3f9" stroke="#1464a5"></rect>
+          <text x="135" y="358" text-anchor="middle" class="svg-texto-b">PostgreSQL</text>
+          <text x="135" y="378" text-anchor="middle" class="svg-texto">índice</text>
+          <line x1="243" y1="364" x2="212" y2="364" class="svg-flecha"></line>
+        </svg>
+        <figcaption>Despliegue cloud-native: el servicio persiste estado en PostgreSQL, emite CloudEvents por Kafka, el Data Index los indexa y los sirve por GraphQL al Management Console; el Jobs Service (singleton) dispara los temporizadores. Todo en contenedores sobre Kubernetes, con APIs por HTTP/HTTPS.</figcaption>
+      </figure>
+
+      <div class="aviso tip"><div class="titulo">✅ Tip</div><p>No tienes que desplegar las cuatro piezas el primer día. El camino habitual es: (1) activar persistencia, (2) sumar el Jobs Service si usas temporizadores de larga vida, y (3) añadir Data Index + Management Console cuando necesites observar y operar las instancias. Crece a tu ritmo.</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>Una receta práctica para llevar a producción</h2>
+      <p>Reuniendo todo lo anterior, estos son los pasos para que tu servicio sea apto para un entorno real:</p>
+
+      <ol class="pasos">
+        <li><strong>Elige el motor.</strong> Para la mayoría: PostgreSQL/JDBC, reutilizando lo que ya operas del Módulo 6.</li>
+        <li><strong>Agrega el add-on y el driver</strong> en el <code class="en-linea">pom.xml</code> (uno por motor).</li>
+        <li><strong>Configura el datasource</strong> y <code class="en-linea">kogito.persistence.type</code> en <code class="en-linea">application.properties</code> — sin tocar Java.</li>
+        <li><strong>Despliega el Jobs Service</strong> (uno solo, con su persistencia) si tienes temporizadores de larga vida.</li>
+        <li><strong>Suma Data Index y Management Console</strong> para consultar y operar; ambos se alimentan de los CloudEvents por Kafka.</li>
+        <li><strong>Escala tu servicio</strong> de negocio a N réplicas con confianza: el estado vive en la base, el bloqueo optimista evita pisotones.</li>
+      </ol>
+
+      <div class="chips">
+        <span class="chip"><span class="pildora azul">JDBC</span> estado durable</span>
+        <span class="chip"><span class="pildora aqua">Kafka</span> CloudEvents</span>
+        <span class="chip"><span class="pildora verde">Data Index</span> GraphQL</span>
+        <span class="chip"><span class="pildora rojo">Mgmt Console</span> operación</span>
+        <span class="chip"><span class="pildora ambar">Jobs Service</span> temporizadores</span>
+      </div>
+
+      <div class="aviso alto"><div class="titulo">⛔ Importante</div><p>El error más común al pasar a producción es <strong>olvidar la persistencia</strong> y descubrirlo el día del primer despliegue caliente: todas las instancias en vuelo desaparecen. Activa la persistencia <em>antes</em> de tener tráfico real, no después del primer incidente.</p></div>
+    </section>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="09-eventos-senales-timers.html"><div class="dir">← Anterior</div><div class="tit">Eventos, señales y temporizadores</div></a>
+    <a href="11-testing-proceso.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">Probar el proceso</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot</span>
+  </footer>
+
+</body>
+</html>

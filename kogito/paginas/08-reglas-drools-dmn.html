@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tema 08 · Reglas de negocio con DMN y Drools — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="07-tareas-humanas.html" class="oculta-movil">← Anterior</a>
+    <a href="09-eventos-senales-timers.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Tema 08</span>
+    <h1>Reglas de negocio con DMN y Drools</h1>
+    <p class="bajada">Saca las decisiones de tu código. En lugar de un <code class="en-linea">if</code> anidado que solo tú entiendes, una tabla que el área de negocio lee, audita y cambia sin recompilar nada.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Por qué separar la decisión del flujo</h2>
+      <p>
+        Tus procesos BPMN describen <strong>el camino</strong>: qué pasa primero, qué después, quién aprueba, cuándo se
+        notifica. Pero dentro de ese camino casi siempre hay una pregunta del tipo «¿aprobamos este crédito o no?». Esa
+        pregunta es una <strong>decisión de negocio</strong>, y tiene una propiedad incómoda: <strong>cambia mucho más
+        seguido que el flujo</strong>. El umbral de ingresos sube, la edad mínima baja, se agrega una excepción para
+        clientes preferentes… y todo eso lo decide el área de riesgo, no tú.
+      </p>
+      <p>
+        Si esa lógica vive como un <code class="en-linea">if</code> dentro de tu <code class="en-linea">Service</code>,
+        cada ajuste implica: tocar código, abrir un pull request, esperar revisión, compilar, desplegar. Y nadie del
+        negocio puede <em>leer</em> qué regla aplicó a un cliente concreto. Al <strong>separar la decisión del flujo</strong>
+        ganas tres cosas:
+      </p>
+      <ul>
+        <li><strong>Editable:</strong> la regla vive en un modelo declarativo (una tabla), no en bytecode. Se cambia un valor, no una clase.</li>
+        <li><strong>Auditable:</strong> cada decisión deja claro <em>qué regla</em> se disparó y con qué datos. Riesgo y cumplimiento lo entienden sin leer Java.</li>
+        <li><strong>Compartible:</strong> el mismo modelo de decisión lo usan varios procesos, e incluso se expone como su propia API REST.</li>
+      </ul>
+
+      <div class="puente">
+        <p>
+          Ya hiciste algo parecido cuando moviste cadenas a <code class="en-linea">messages.properties</code> o
+          configuración a <code class="en-linea">application.yml</code>: sacaste de la clase lo que cambia seguido para no
+          recompilar por cada ajuste. Aquí haces lo mismo, pero con <strong>la lógica de decisión completa</strong>: en vez
+          de un <code class="en-linea">@Service</code> con un <code class="en-linea">switch</code> gigante, un modelo
+          <strong>DMN</strong> que el negocio mantiene. El proceso solo le pregunta «¿qué decides?» y sigue su camino.
+        </p>
+      </div>
+
+      <p>
+        Apache KIE te da dos herramientas para esto, y conviene tenerlas claras desde el inicio:
+      </p>
+      <div class="chips">
+        <span class="chip"><span class="pildora azul">DMN</span> Estándar visual de la OMG. Tablas de decisión que el negocio lee y edita.</span>
+        <span class="chip"><span class="pildora aqua">Drools / DRL</span> Motor de reglas programático <code class="en-linea">when / then</code> para lógica compleja.</span>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>DMN: Decision Model and Notation</h2>
+      <p>
+        <strong>DMN</strong> es un estándar abierto de la <strong>OMG</strong> (la misma organización detrás de BPMN), y
+        Drools implementa su motor hasta el <strong>nivel de conformidad 3</strong>, el más completo. Igual que BPMN es el
+        lenguaje visual de los <em>procesos</em>, DMN es el lenguaje visual de las <em>decisiones</em>. Y se editan con el
+        mismo tipo de herramienta: un editor de diagramas que, por debajo, mantiene un archivo <code class="en-linea">.dmn</code>
+        (XML) que no escribes a mano.
+      </p>
+
+      <h3>El DRD: diagrama de requisitos de decisión</h3>
+      <p>
+        El <strong>DRD</strong> (<em>Decision Requirements Diagram</em>) es el «mapa» de una decisión: muestra qué
+        <strong>datos de entrada</strong> alimentan a qué <strong>decisiones</strong>, y cómo unas decisiones dependen de
+        otras. Se lee de abajo (los datos) hacia arriba (la decisión final).
+      </p>
+
+      <div class="chips">
+        <span class="chip">
+          <span class="ico"><svg viewBox="0 0 22 18"><path d="M3,15 L7,3 L19,3 L15,15 Z" fill="#fff7e6" stroke="#b87900" stroke-width="2"></path></svg></span>
+          Dato de entrada (Input Data)
+        </span>
+        <span class="chip">
+          <span class="ico"><svg viewBox="0 0 22 18"><rect x="2" y="3" width="18" height="12" rx="1.5" fill="#e3f0fb" stroke="#1464a5" stroke-width="2"></rect></svg></span>
+          Decisión (Decision)
+        </span>
+        <span class="chip">
+          <span class="ico"><svg viewBox="0 0 22 18"><rect x="2" y="3" width="18" height="12" rx="6" fill="#ddf7f7" stroke="#028484" stroke-width="2"></rect></svg></span>
+          Modelo de conocimiento (BKM)
+        </span>
+      </div>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 660 320" role="img" aria-label="DRD del scoring de crédito: cuatro datos de entrada alimentan la decisión Calcular score, que a su vez alimenta la decisión Decisión de crédito">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Decisión final (arriba) -->
+          <rect x="230" y="20" width="200" height="56" rx="3" fill="#e3f0fb" stroke="#1464a5" stroke-width="2.2"></rect>
+          <text x="330" y="44" text-anchor="middle" class="svg-texto-b">Decisión de crédito</text>
+          <text x="330" y="63" text-anchor="middle" class="svg-texto" font-size="12">aprobado / revisión / rechazado</text>
+
+          <!-- Decisión intermedia -->
+          <rect x="250" y="140" width="160" height="52" rx="3" fill="#e3f0fb" stroke="#1464a5" stroke-width="2.2"></rect>
+          <text x="330" y="164" text-anchor="middle" class="svg-texto-b">Calcular score</text>
+          <text x="330" y="182" text-anchor="middle" class="svg-texto" font-size="12">0 – 100</text>
+
+          <!-- Datos de entrada (abajo) - trapecios -->
+          <path d="M30,290 L46,250 L150,250 L134,290 Z" fill="#fff7e6" stroke="#b87900" stroke-width="2"></path>
+          <text x="90" y="276" text-anchor="middle" class="svg-texto" font-size="12">ingresosMensuales</text>
+
+          <path d="M178,290 L194,250 L290,250 L274,290 Z" fill="#fff7e6" stroke="#b87900" stroke-width="2"></path>
+          <text x="234" y="276" text-anchor="middle" class="svg-texto" font-size="12">montoSolicitado</text>
+
+          <path d="M318,290 L334,250 L398,250 L382,290 Z" fill="#fff7e6" stroke="#b87900" stroke-width="2"></path>
+          <text x="358" y="276" text-anchor="middle" class="svg-texto" font-size="12">edad</text>
+
+          <path d="M426,290 L442,250 L520,250 L504,290 Z" fill="#fff7e6" stroke="#b87900" stroke-width="2"></path>
+          <text x="473" y="276" text-anchor="middle" class="svg-texto" font-size="12">tieneMora</text>
+
+          <!-- Requisito de información: datos -> Calcular score -->
+          <line x1="90" y1="250" x2="290" y2="194" class="svg-flecha"></line>
+          <line x1="234" y1="250" x2="310" y2="194" class="svg-flecha"></line>
+          <line x1="358" y1="250" x2="345" y2="194" class="svg-flecha"></line>
+          <line x1="473" y1="250" x2="375" y2="194" class="svg-flecha"></line>
+
+          <!-- Calcular score -> Decisión de crédito -->
+          <line x1="330" y1="140" x2="330" y2="78" class="svg-flecha"></line>
+        </svg>
+        <figcaption>DRD del scoring de crédito. Los <strong>trapecios</strong> son datos de entrada; los <strong>rectángulos</strong> son decisiones. Las flechas son <em>requisitos de información</em>: el dato (o decisión) de origen alimenta a la decisión de destino.</figcaption>
+      </figure>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota</div>
+        <p>
+          El DRD distingue tres tipos de conexión: el <strong>requisito de información</strong> (un dato o decisión
+          alimenta a otra decisión, flecha llena), el <strong>requisito de conocimiento</strong> (un BKM —función
+          reutilizable— presta su lógica a una decisión) y el <strong>requisito de autoridad</strong> (una fuente de
+          conocimiento, como una política, justifica un elemento). En este tema nos basta con el primero.
+        </p>
+      </div>
+
+      <h3>FEEL: el lenguaje de expresiones</h3>
+      <p>
+        Dentro de cada celda de una decisión, las condiciones y los cálculos se escriben en <strong>FEEL</strong>
+        (<em>Friendly Enough Expression Language</em>), también parte del estándar DMN. Es un lenguaje pequeño, legible y
+        sin efectos secundarios, pensado para que lo entienda un analista de negocio, no solo un programador. Algunos
+        ejemplos de lo que verás en las tablas:
+      </p>
+
+      <table class="tabla">
+        <thead>
+          <tr><th>Expresión FEEL</th><th>Significado</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>&gt;= 20000</code></td><td>El valor de entrada es mayor o igual a 20&nbsp;000.</td></tr>
+          <tr><td><code>[18..25)</code></td><td>Rango: de 18 (incluido) a 25 (excluido).</td></tr>
+          <tr><td><code>&lt; 30000, &gt; 80000</code></td><td>Lista de pruebas; coincide si es alguna de ellas (menor a 30&nbsp;000 <em>o</em> mayor a 80&nbsp;000).</td></tr>
+          <tr><td><code>true</code></td><td>Comparación booleana directa (p.&nbsp;ej. <code>tieneMora = true</code>).</td></tr>
+          <tr><td><code>-</code></td><td>Comodín: esa columna no importa para la regla (cualquier valor coincide).</td></tr>
+          <tr><td><code>ingresosMensuales / montoSolicitado &gt; 0.4</code></td><td>Cálculo con los datos de entrada dentro de una expresión.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>
+          FEEL tiene tipos ricos sin sorpresas: <code class="en-linea">number</code> con precisión decimal de 34 dígitos
+          (nada de errores de redondeo binario como con <code class="en-linea">double</code>),
+          <code class="en-linea">date</code>, <code class="en-linea">duration</code>, listas, rangos y funciones
+          integradas (<code class="en-linea">sum()</code>, <code class="en-linea">count()</code>,
+          <code class="en-linea">contains()</code>…). El <code class="en-linea">number</code> de FEEL es lo que usarías con
+          <code class="en-linea">BigDecimal</code> en Java, pero sin la verbosidad.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Una tabla de decisión: scoring de crédito</h2>
+      <p>
+        Aquí está el corazón del tema. Una <strong>tabla de decisión</strong> traduce a filas y columnas eso que en código
+        sería una maraña de <code class="en-linea">if / else if</code>. Tiene <strong>columnas de entrada</strong> (las
+        condiciones), <strong>columnas de salida</strong> (lo que produce) y una <strong>hit policy</strong> que indica qué
+        hacer cuando varias filas coinciden. Cada fila <strong>es una regla</strong>.
+      </p>
+      <p>
+        Esta es la decisión <code class="en-linea">Calcular score</code> y su veredicto, modelada como la leería el área de
+        riesgo. La <strong>hit policy es <code class="en-linea">PRIORITY</code> (P)</strong>: si más de una fila coincide,
+        gana la de mayor prioridad según el orden de los valores de salida (las reglas más restrictivas van arriba).
+      </p>
+
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th colspan="4" style="text-align:center">Entradas <span class="pildora azul">U: si está en mora hay decisión directa</span></th>
+            <th colspan="2" style="text-align:center">Salidas</th>
+          </tr>
+          <tr>
+            <th title="hit policy PRIORITY">P</th>
+            <th>ingresosMensuales</th>
+            <th>montoSolicitado</th>
+            <th>edad</th>
+            <th>tieneMora</th>
+            <th>score</th>
+            <th>decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>-</code></td>
+            <td><code>-</code></td>
+            <td><code>-</code></td>
+            <td><code>true</code></td>
+            <td><code>0</code></td>
+            <td><span class="pildora rojo">rechazado</span></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>-</code></td>
+            <td><code>-</code></td>
+            <td><code>&lt; 18</code></td>
+            <td><code>false</code></td>
+            <td><code>0</code></td>
+            <td><span class="pildora rojo">rechazado</span></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>&gt;= 50000</code></td>
+            <td><code>&lt;= 200000</code></td>
+            <td><code>[25..65]</code></td>
+            <td><code>false</code></td>
+            <td><code>90</code></td>
+            <td><span class="pildora verde">aprobado</span></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>&gt;= 20000</code></td>
+            <td><code>&lt;= 100000</code></td>
+            <td><code>[18..65]</code></td>
+            <td><code>false</code></td>
+            <td><code>70</code></td>
+            <td><span class="pildora verde">aprobado</span></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>[12000..20000)</code></td>
+            <td><code>&lt;= 60000</code></td>
+            <td><code>[18..70]</code></td>
+            <td><code>false</code></td>
+            <td><code>55</code></td>
+            <td><span class="pildora ambar">revisión</span></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><code>-</code></td>
+            <td><code>-</code></td>
+            <td><code>-</code></td>
+            <td><code>false</code></td>
+            <td><code>30</code></td>
+            <td><span class="pildora rojo">rechazado</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        Lee la tabla como un humano: una persona de 40 años, sin mora, que gana 60&nbsp;000 y pide 150&nbsp;000 coincide
+        con la fila&nbsp;3 → <code class="en-linea">score 90</code>, <strong>aprobado</strong>. Si gana 15&nbsp;000 y pide
+        50&nbsp;000, cae en la fila&nbsp;5 → <strong>revisión</strong>. Y si tiene mora, la fila&nbsp;1 manda sin importar
+        lo demás. <strong>La fila&nbsp;6 es el «cajón de sastre»</strong>: si nada mejor coincidió, rechaza con score bajo.
+      </p>
+
+      <div class="aviso ojo">
+        <div class="titulo">⚠️ Ojo con la hit policy</div>
+        <p>
+          La <strong>hit policy</strong> no es un adorno: cambia el resultado. Con
+          <code class="en-linea">UNIQUE</code> (U) <strong>exactamente una</strong> fila debe coincidir, y si dos coinciden
+          es un error de modelado —ideal cuando las condiciones no se solapan. Con
+          <code class="en-linea">PRIORITY</code> (P) pueden coincidir varias y gana la de salida más prioritaria —útil
+          cuando quieres reglas generales más reglas-excepción, como aquí. Otras políticas habituales:
+          <code class="en-linea">FIRST</code> (F, gana la primera por orden de filas),
+          <code class="en-linea">ANY</code> (A, varias pueden coincidir pero deben dar la misma salida) y
+          <code class="en-linea">COLLECT</code> (C, junta o suma todas las salidas).
+        </p>
+      </div>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>
+          El plugin de Maven de Kogito puede <strong>analizar tu tabla en tiempo de compilación</strong> y avisarte de
+          <strong>huecos</strong> (combinaciones de entrada que ninguna fila cubre) y <strong>solapamientos</strong> (filas
+          que coinciden y se contradicen). Es como un test de cobertura para tus reglas, antes de que un caso raro reviente
+          en producción. Se activa con <code class="en-linea">ANALYZE_DECISION_TABLE</code> en la configuración del
+          <code class="en-linea">kie-maven-plugin</code>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>El proceso invoca la decisión: la Business Rule Task</h2>
+      <p>
+        ¿Cómo se conectan el proceso BPMN y el modelo DMN? Con una pieza específica del alfabeto BPMN: la
+        <strong>Business Rule Task</strong> (tarea de regla de negocio). Es un rectángulo con un pequeño ícono de tabla en
+        la esquina. Cuando el flujo llega a ella, el motor <strong>llama al modelo DMN</strong>, le pasa las variables del
+        proceso como entradas, ejecuta la decisión y <strong>guarda el resultado de vuelta</strong> en una variable del
+        proceso. Ni una línea de Java de por medio.
+      </p>
+
+      <div class="chips">
+        <span class="chip bpmn-tarea">
+          <span class="ico"><svg viewBox="0 0 18 18"><rect x="2" y="4" width="14" height="10" rx="2" fill="#eef3f9" stroke="#004481" stroke-width="2"></rect><line x1="2" y1="7.5" x2="16" y2="7.5" stroke="#004481" stroke-width="1.4"></line><line x1="6" y1="7.5" x2="6" y2="14" stroke="#004481" stroke-width="1.4"></line></svg></span>
+          Business Rule Task
+        </span>
+        <span class="chip">
+          <span class="ico"><svg viewBox="0 0 18 18"><rect x="2" y="3" width="14" height="12" rx="1.5" fill="#e3f0fb" stroke="#1464a5" stroke-width="2"></rect></svg></span>
+          Modelo DMN invocado
+        </span>
+      </div>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 720 300" role="img" aria-label="Proceso de crédito: inicio, tarea de regla Evaluar score que invoca el modelo DMN scoringCredito, un gateway que ramifica según la decisión y los finales aprobado y rechazado">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Inicio -->
+          <circle cx="48" cy="120" r="24" fill="#eefaf2" stroke="#1f9d55" stroke-width="2.5"></circle>
+          <text x="48" y="166" text-anchor="middle" class="svg-texto" font-size="12">Solicitud</text>
+
+          <!-- Business Rule Task -->
+          <rect x="120" y="92" width="190" height="56" rx="12" class="svg-borde svg-relleno"></rect>
+          <rect x="128" y="100" width="20" height="16" rx="2" fill="#fff" stroke="#004481" stroke-width="1.6"></rect>
+          <line x1="128" y1="106" x2="148" y2="106" stroke="#004481" stroke-width="1.2"></line>
+          <line x1="135" y1="106" x2="135" y2="116" stroke="#004481" stroke-width="1.2"></line>
+          <text x="222" y="118" text-anchor="middle" class="svg-texto-b" font-size="13">Evaluar score</text>
+          <text x="222" y="136" text-anchor="middle" class="svg-texto" font-size="11">tarea de regla de negocio</text>
+
+          <!-- Modelo DMN -->
+          <rect x="150" y="218" width="170" height="54" rx="3" fill="#e3f0fb" stroke="#1464a5" stroke-width="2.2"></rect>
+          <text x="235" y="241" text-anchor="middle" class="svg-texto-b" font-size="13">DMN scoringCredito</text>
+          <text x="235" y="259" text-anchor="middle" class="svg-texto" font-size="11">decisión: score + decision</text>
+
+          <!-- conexión vertical entre la tarea de regla y el DMN (invoca) -->
+          <line x1="222" y1="218" x2="222" y2="150" class="svg-flecha"></line>
+          <text x="262" y="190" text-anchor="middle" class="svg-texto" font-size="11" fill="#028484">invoca</text>
+
+          <!-- Gateway exclusivo (rombo) -->
+          <path d="M398,120 L430,88 L462,120 L430,152 Z" fill="#fff7e6" stroke="#b87900" stroke-width="2.4"></path>
+          <text x="430" y="125" text-anchor="middle" class="svg-texto-b" font-size="13">×</text>
+          <text x="430" y="172" text-anchor="middle" class="svg-texto" font-size="11">según decision</text>
+
+          <!-- Fin aprobado -->
+          <circle cx="640" cy="56" r="24" fill="#fdeeee" stroke="#d64545" stroke-width="3.5"></circle>
+          <text x="640" y="22" text-anchor="middle" class="svg-texto" font-size="12">Aprobado</text>
+
+          <!-- Fin rechazado -->
+          <circle cx="640" cy="190" r="24" fill="#fdeeee" stroke="#d64545" stroke-width="3.5"></circle>
+          <text x="640" y="232" text-anchor="middle" class="svg-texto" font-size="12">Rechazado</text>
+
+          <!-- Flujos -->
+          <line x1="72" y1="120" x2="118" y2="120" class="svg-flecha"></line>
+          <line x1="310" y1="120" x2="396" y2="120" class="svg-flecha"></line>
+          <line x1="455" y1="98"  x2="616" y2="62"  class="svg-flecha"></line>
+          <line x1="455" y1="142" x2="616" y2="184" class="svg-flecha"></line>
+
+          <text x="540" y="64"  text-anchor="middle" class="svg-texto" font-size="11" fill="#1f9d55">= "aprobado"</text>
+          <text x="540" y="178" text-anchor="middle" class="svg-texto" font-size="11" fill="#d64545">= "rechazado"</text>
+        </svg>
+        <figcaption>La tarea <strong>Evaluar score</strong> invoca el modelo <code>scoringCredito</code>, recibe <code>score</code> y <code>decision</code> en variables del proceso, y el <em>gateway</em> ramifica según el resultado. El proceso decide el camino; el DMN decide el veredicto.</figcaption>
+      </figure>
+
+      <p>
+        En el editor solo configuras el <strong>enlace</strong>: qué modelo DMN se invoca, qué variables del proceso se
+        mapean a las entradas, y en qué variable cae el resultado. En el XML del proceso, una Business Rule Task de DMN se
+        ve así de simple (lo genera el editor, no lo tecleas):
+      </p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">src/main/resources/credito.bpmn2</span></div>
+        <pre><code><span class="cmt">&lt;!-- Fragmento ilustrativo: la tarea de regla apunta al modelo DMN --&gt;</span>
+<span class="kw">&lt;businessRuleTask</span> <span class="anot">id</span>=<span class="str">"_evaluarScore"</span> <span class="anot">name</span>=<span class="str">"Evaluar score"</span>
+    <span class="anot">implementation</span>=<span class="str">"http://www.omg.org/spec/DMN/20180521/MODEL/"</span>
+    <span class="anot">drools:namespace</span>=<span class="str">"https://academy.com/dmn/scoringCredito"</span>
+    <span class="anot">drools:model</span>=<span class="str">"scoringCredito"</span>
+    <span class="anot">drools:decision</span>=<span class="str">"Decisión de crédito"</span><span class="kw">/&gt;</span></code></pre>
+      </div>
+
+      <p>
+        Como <code class="en-linea">ingresosMensuales</code>, <code class="en-linea">montoSolicitado</code>,
+        <code class="en-linea">edad</code> y <code class="en-linea">tieneMora</code> son variables del proceso con el mismo
+        nombre que las entradas del DMN, el motor las empareja solas y, al terminar, escribe
+        <code class="en-linea">score</code> y <code class="en-linea">decision</code> de vuelta en el proceso. A partir de
+        ahí, tu <em>gateway</em> ramifica con una condición FEEL como <code class="en-linea">decision = "aprobado"</code>.
+      </p>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ El DMN también es su propia API</div>
+        <p>
+          Igual que un proceso autogenera su endpoint REST, <strong>un modelo DMN también</strong>. Kogito publica
+          <code class="en-linea">POST /scoringCredito</code> para evaluar la decisión <em>por sí sola</em>, sin proceso de
+          por medio. Útil para que otra aplicación pregunte «¿qué score le das a este cliente?» directamente, o para
+          probar la decisión aislada en tus pruebas de JUnit con <code class="en-linea">RestAssured</code>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>Cuando la tabla no alcanza: Drools y DRL</h2>
+      <p>
+        DMN es perfecto cuando la decisión cabe en una tabla de condiciones y resultados. Pero a veces el negocio tiene
+        reglas <strong>más enredadas</strong>: que dependen de relaciones entre varios objetos, de agregaciones («cuenta
+        cuántos pedidos impagos tiene»), de inferencia («si esto es verdad, deduce esto otro y vuelve a evaluar»). Para eso
+        está <strong>Drools</strong> con su lenguaje <strong>DRL</strong>: un motor de reglas de producción donde escribes
+        reglas <code class="en-linea">when / then</code> (cuando se cumple un patrón, ejecuta una acción) y el motor decide
+        cuáles disparar y en qué orden.
+      </p>
+
+      <p>
+        La forma de una regla DRL es siempre la misma: un nombre, un bloque <strong><code class="en-linea">when</code></strong>
+        (las condiciones, que el motor empareja contra los hechos en memoria) y un bloque
+        <strong><code class="en-linea">then</code></strong> (qué hacer si coincide). Aquí, una regla que penaliza el score
+        de un solicitante con varios créditos activos —algo que en una tabla plana sería incómodo de expresar:
+      </p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">src/main/resources/reglas/credito.drl</span></div>
+        <pre><code><span class="kw">package</span> mx.academy.credito;
+
+<span class="kw">unit</span> CreditoUnit;  <span class="cmt">// Rule Unit: el estilo moderno de KIE 10.x</span>
+
+<span class="kw">rule</span> <span class="str">"Penalizar exceso de créditos activos"</span>
+<span class="kw">when</span>
+    <span class="cmt">// Empareja una solicitud cuyo titular tiene 3 o más créditos vigentes</span>
+    $s : /solicitudes[ creditosActivos &gt;= <span class="typ">3</span>, score &gt; <span class="typ">0</span> ]
+<span class="kw">then</span>
+    <span class="cmt">// Recalcula y avisa al motor del cambio</span>
+    modify($s) { setScore( $s.getScore() - <span class="typ">25</span> ),
+                 setDecision( <span class="str">"revisión"</span> ) };
+<span class="kw">end</span></code></pre>
+      </div>
+
+      <p>
+        Lo poderoso de Drools es que <strong>no escribes el orden de evaluación</strong>: insertas los hechos, el motor
+        encuentra todas las reglas que coinciden y las dispara, encadenando deducciones automáticamente. Para reglas
+        densamente interrelacionadas eso es mucho más limpio que un método con veinte <code class="en-linea">if</code>
+        anidados. La integración con BPMN es directa: una Business Rule Task también puede activar un grupo de reglas DRL
+        (un <code class="en-linea">ruleflow-group</code>) en lugar de un modelo DMN.
+      </p>
+
+      <table class="tabla">
+        <thead>
+          <tr><th></th><th>DMN (tabla de decisión)</th><th>Drools / DRL</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Quién la mantiene</strong></td><td>El área de negocio, visualmente</td><td>Desarrollo, en archivos <code>.drl</code></td></tr>
+          <tr><td><strong>Mejor para</strong></td><td>Decisiones que caben en una tabla</td><td>Inferencia, agregaciones, relaciones complejas</td></tr>
+          <tr><td><strong>Forma</strong></td><td>Estándar OMG, declarativa y visual</td><td><code>when / then</code> sobre hechos en memoria</td></tr>
+          <tr><td><strong>Auditable por negocio</strong></td><td><span class="pildora verde">Sí, lo lee directo</span></td><td><span class="pildora ambar">Requiere apoyo técnico</span></td></tr>
+        </tbody>
+      </table>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Regla práctica</div>
+        <p>
+          Empieza con <strong>DMN</strong>. Es lo que el negocio puede leer y cambiar sin ti, y cubre la enorme mayoría de
+          las decisiones reales. Baja a <strong>DRL</strong> solo cuando la lógica deje de caber con naturalidad en una
+          tabla: reglas que se encadenan, que cuentan o relacionan muchos objetos, o que necesitan inferencia. No es uno
+          <em>contra</em> el otro: conviven en el mismo proyecto y el mismo proceso los invoca igual, con una Business Rule
+          Task.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="seccion">
+      <h2>El antes y el después</h2>
+      <p>
+        Cierra el tema con la imagen que vale la pena recordar. A la izquierda, la decisión enterrada en código; a la
+        derecha, la decisión sacada a un modelo que el negocio entiende y mantiene.
+      </p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">ANTES · ScoringService.java</span></div>
+        <pre><code><span class="anot">@Service</span>
+<span class="kw">public class</span> <span class="typ">ScoringService</span> {
+    <span class="kw">public</span> <span class="typ">String</span> decidir(<span class="typ">Solicitud</span> s) {
+        <span class="kw">if</span> (s.isTieneMora()) <span class="kw">return</span> <span class="str">"rechazado"</span>;
+        <span class="kw">if</span> (s.getEdad() &lt; <span class="typ">18</span>) <span class="kw">return</span> <span class="str">"rechazado"</span>;
+        <span class="kw">if</span> (s.getIngresos() &gt;= <span class="typ">50000</span>
+              &amp;&amp; s.getMonto() &lt;= <span class="typ">200000</span>
+              &amp;&amp; s.getEdad() &gt;= <span class="typ">25</span>) <span class="kw">return</span> <span class="str">"aprobado"</span>;
+        <span class="cmt">// … y otros doce if que solo tú entiendes,</span>
+        <span class="cmt">// y que recompilas y despliegas por cada ajuste.</span>
+        <span class="kw">return</span> <span class="str">"rechazado"</span>;
+    }
+}</code></pre>
+      </div>
+
+      <div class="puente">
+        <p>
+          Ese <code class="en-linea">ScoringService</code> con la cascada de <code class="en-linea">if</code> es justo lo
+          que ya sabes escribir… y justo lo que envejece mal: <strong>cada cambio de política te obliga a tocar Java,
+          revisar, compilar y desplegar</strong>, y nadie del negocio puede leerlo ni decir <em>qué</em> regla aplicó.
+          Con DMN, ese método entero se convierte en la <strong>tabla de decisión</strong> de arriba —una tabla que riesgo
+          edita y audita sin recompilar la lógica— y tu proceso solo la invoca con una <strong>Business Rule Task</strong>.
+          Pasaste de «la decisión vive escondida en mi clase» a «la decisión es un activo del negocio, versionado y
+          visible».
+        </p>
+      </div>
+
+      <ol class="pasos">
+        <li>El área de riesgo modela la decisión como un <strong>DMN</strong>: DRD, tabla de decisión y su <em>hit policy</em>.</li>
+        <li>Tu proceso BPMN agrega una <strong>Business Rule Task</strong> que invoca ese modelo.</li>
+        <li>Las variables del proceso entran como datos del DMN; <code class="en-linea">score</code> y <code class="en-linea">decision</code> regresan al proceso.</li>
+        <li>Un <em>gateway</em> ramifica el flujo según el resultado; tú nunca escribiste la lógica de decisión.</li>
+        <li>Cuando la regla cambia, se edita la <strong>tabla</strong>, no tu código. Y si algún día no cabe en tabla, bajas a <strong>DRL</strong>.</li>
+      </ol>
+
+      <div class="aviso alto">
+        <div class="titulo">⛔ Error común a evitar</div>
+        <p>
+          No mezcles responsabilidades: si pones la lógica de decisión <em>también</em> en un
+          <code class="en-linea">@Service</code> «por si acaso», terminas con dos fuentes de verdad que se
+          desincronizan, y vuelves al problema que querías resolver. Si la decisión es de negocio, vive en el
+          <strong>DMN</strong> (o en DRL); el código solo orquesta. Y recuerda: el endpoint del modelo de decisión, igual
+          que el del proceso, <strong>se autogenera</strong> —no escribes un <code class="en-linea">@RestController</code>
+          para exponerlo.
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="07-tareas-humanas.html"><div class="dir">← Anterior</div><div class="tit">Tareas humanas</div></a>
+    <a href="09-eventos-senales-timers.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">Eventos, señales y temporizadores</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot · Java 21</span>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tema 03 · BPMN 2.0: el alfabeto del proceso — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="02-de-springboot-a-kogito.html" class="oculta-movil">← Anterior</a>
+    <a href="04-primer-proceso-rest.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Tema 03</span>
+    <h1>BPMN 2.0: el alfabeto del proceso</h1>
+    <p class="bajada">Antes de programar un solo proceso necesitas leer su notación. BPMN es el alfabeto compartido con el que dibujarás —y ejecutarás— la lógica de negocio en Kogito.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <!-- =====================================================
+         1. BPMN como estándar de la OMG
+         ===================================================== -->
+    <section class="seccion">
+      <h2>Un alfabeto que todos leen igual</h2>
+      <p><strong>BPMN</strong> son las siglas de <em>Business Process Model and Notation</em>: una notación gráfica estándar para describir procesos de negocio. La mantiene la <strong>OMG</strong> (Object Management Group), el mismo organismo detrás de UML. Su versión vigente es <strong>BPMN 2.0</strong>, y lo importante es esto: no es un dibujo bonito que luego alguien traduce a código, <em>es</em> el código. El archivo <code class="en-linea">.bpmn</code> que dibujas es XML ejecutable que Kogito convierte en un servicio real.</p>
+
+      <p>Piensa en BPMN como un <strong>alfabeto</strong>. Igual que con 27 letras puedes escribir cualquier palabra en español, con un puñado de símbolos BPMN puedes describir desde una compra de café hasta la apertura de una cuenta bancaria. Y como es un estándar, cualquier analista de negocio, arquitecto o motor (jBPM, Kogito, Camunda, Activiti…) lee exactamente lo mismo. Cero ambigüedad.</p>
+
+      <div class="puente">
+        <p>Un diagrama BPMN es como un <strong>diagrama de flujo de toda la vida</strong> —de esos que dibujabas en una servilleta para explicar un algoritmo— pero con dos superpoderes: está <strong>estandarizado</strong> (los símbolos significan lo mismo en cualquier empresa del mundo) y es <strong>ejecutable</strong> (el motor lo corre tal cual, sin que tengas que reescribirlo en Java). La servilleta se volvió un artefacto desplegable.</p>
+      </div>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>El nombre completo lo dice todo: <em>Model and Notation</em>. <strong>Model</strong> es la semántica (qué significa cada cosa al ejecutarse) y <strong>Notation</strong> es la forma visual (cómo se dibuja). En este tema aprendes la notación; en los siguientes le darás vida con datos y reglas.</p>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         2. Las 4 familias de símbolos
+         ===================================================== -->
+    <section class="seccion">
+      <h2>Las 4 familias de símbolos</h2>
+      <p>BPMN se reduce a cuatro grandes familias. Si dominas estas cuatro, lees el 90% de los diagramas que verás en tu vida profesional. Vamos una por una, con su símbolo auténtico dibujado al lado.</p>
+
+      <div class="chips">
+        <span class="chip"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#1f9d55" stroke-width="2"></circle></svg></span> <span class="bpmn-evento">Eventos</span></span>
+        <span class="chip"><span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3" fill="none" stroke="#004481" stroke-width="2"></rect></svg></span> <span class="bpmn-tarea">Actividades</span></span>
+        <span class="chip"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 3 L21 12 L12 21 L3 12 Z" fill="none" stroke="#f0a202" stroke-width="2"></path></svg></span> <span class="bpmn-gateway">Gateways</span></span>
+        <span class="chip"><span class="ico"><svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="18" y2="12" stroke="#495567" stroke-width="2"></line><path d="M16 8 L22 12 L16 16 Z" fill="#495567"></path></svg></span> <span class="bpmn-flujo">Flujos</span></span>
+      </div>
+
+      <!-- ----- FAMILIA 1: EVENTOS ----- -->
+      <h3>1. Eventos — algo que <em>sucede</em></h3>
+      <p>Los eventos son <strong>círculos</strong> y representan cosas que ocurren durante el proceso: que empiece, que termine, o algo que pasa en medio (un mensaje que llega, un temporizador que vence). El grosor y la cantidad de líneas del círculo te dicen de qué tipo es.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 620 170" role="img" aria-label="Tres tipos de evento BPMN: inicio con línea fina, intermedio con doble círculo y fin con línea gruesa">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+          <!-- Inicio: línea fina -->
+          <circle cx="100" cy="70" r="34" fill="#eefaf2" stroke="#1f9d55" stroke-width="2"></circle>
+          <text x="100" y="135" text-anchor="middle" class="svg-texto-b">Inicio</text>
+          <text x="100" y="155" text-anchor="middle" class="svg-texto">línea fina</text>
+          <!-- Intermedio: doble círculo -->
+          <circle cx="310" cy="70" r="34" fill="#fff7e6" stroke="#b87900" stroke-width="2"></circle>
+          <circle cx="310" cy="70" r="28" fill="none" stroke="#b87900" stroke-width="2"></circle>
+          <text x="310" y="135" text-anchor="middle" class="svg-texto-b">Intermedio</text>
+          <text x="310" y="155" text-anchor="middle" class="svg-texto">doble círculo</text>
+          <!-- Fin: línea gruesa -->
+          <circle cx="520" cy="70" r="34" fill="#fdeeee" stroke="#d64545" stroke-width="5"></circle>
+          <text x="520" y="135" text-anchor="middle" class="svg-texto-b">Fin</text>
+          <text x="520" y="155" text-anchor="middle" class="svg-texto">línea gruesa</text>
+        </svg>
+        <figcaption>Los tres eventos básicos. Truco para recordarlos: la línea engorda conforme avanzas en el tiempo (fino al empezar, grueso al terminar).</figcaption>
+      </figure>
+
+      <table class="tabla">
+        <thead><tr><th>Evento</th><th>Aspecto</th><th>Significa</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Inicio</strong></td><td>Círculo de línea fina</td><td>Por dónde arranca el proceso. Suele dispararse con una petición REST.</td></tr>
+          <tr><td><strong>Intermedio</strong></td><td>Doble círculo</td><td>Algo que pasa en medio: esperar un mensaje, un temporizador, lanzar una señal.</td></tr>
+          <tr><td><strong>Fin</strong></td><td>Círculo de línea gruesa</td><td>El proceso (o esa rama) concluye. Puede devolver un resultado.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota</div>
+        <p>Dentro del círculo se dibuja a veces un iconito (un sobre = mensaje, un reloj = temporizador, un triángulo = señal). El círculo te dice <em>cuándo</em> en el flujo; el icono te dice <em>qué</em> lo dispara. Por ahora basta con reconocer el círculo y su grosor.</p>
+      </div>
+
+      <!-- ----- FAMILIA 2: ACTIVIDADES / TAREAS ----- -->
+      <h3>2. Actividades — el <em>trabajo</em> que se hace</h3>
+      <p>Una <strong>tarea</strong> es un rectángulo de esquinas redondeadas. Es donde realmente <em>pasa algo</em>: se llama a un servicio, una persona aprueba un documento, se evalúan reglas. El tipo de tarea se indica con un <strong>iconito en la esquina superior izquierda</strong>, y esto importa muchísimo porque le dice al motor <em>quién</em> ejecuta el trabajo.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 680 180" role="img" aria-label="Cuatro tipos de tarea BPMN: usuario con icono de persona, servicio con engrane, regla de negocio con tabla y script con documento">
+          <!-- Tarea de usuario -->
+          <rect x="20" y="30" width="150" height="70" rx="12" class="svg-borde" fill="#e3f0fb"></rect>
+          <g stroke="#004481" stroke-width="1.8" fill="none">
+            <circle cx="38" cy="46" r="5"></circle>
+            <path d="M30 60 Q38 50 46 60"></path>
+          </g>
+          <text x="95" y="72" text-anchor="middle" class="svg-texto-b">Usuario</text>
+          <text x="95" y="130" text-anchor="middle" class="svg-texto">persona aprueba</text>
+
+          <!-- Tarea de servicio -->
+          <rect x="190" y="30" width="150" height="70" rx="12" class="svg-borde" fill="#e3f0fb"></rect>
+          <g stroke="#004481" stroke-width="1.8" fill="none">
+            <circle cx="208" cy="48" r="6"></circle>
+            <circle cx="208" cy="48" r="2.3" fill="#004481"></circle>
+            <path d="M208 40 V36 M208 56 V60 M200 48 H196 M216 48 H220 M202.5 42.5 L199.5 39.5 M213.5 42.5 L216.5 39.5 M202.5 53.5 L199.5 56.5 M213.5 53.5 L216.5 56.5"></path>
+          </g>
+          <text x="265" y="72" text-anchor="middle" class="svg-texto-b">Servicio</text>
+          <text x="265" y="130" text-anchor="middle" class="svg-texto">llama a tu código</text>
+
+          <!-- Tarea de regla de negocio -->
+          <rect x="360" y="30" width="150" height="70" rx="12" class="svg-borde" fill="#e3f0fb"></rect>
+          <g stroke="#004481" stroke-width="1.6" fill="none">
+            <rect x="200" y="0" width="0" height="0"></rect>
+            <rect x="372" y="38" width="22" height="16"></rect>
+            <line x1="372" y1="44" x2="394" y2="44"></line>
+            <line x1="379.5" y1="38" x2="379.5" y2="54"></line>
+          </g>
+          <text x="435" y="72" text-anchor="middle" class="svg-texto-b">Regla</text>
+          <text x="435" y="130" text-anchor="middle" class="svg-texto">decide con Drools</text>
+
+          <!-- Tarea de script -->
+          <rect x="530" y="30" width="130" height="70" rx="12" class="svg-borde" fill="#e3f0fb"></rect>
+          <g stroke="#004481" stroke-width="1.6" fill="none">
+            <path d="M544 38 H560 L566 44 V58 H544 Z"></path>
+            <path d="M560 38 V44 H566"></path>
+            <line x1="548" y1="49" x2="562" y2="49"></line>
+            <line x1="548" y1="53" x2="560" y2="53"></line>
+          </g>
+          <text x="595" y="72" text-anchor="middle" class="svg-texto-b">Script</text>
+          <text x="595" y="130" text-anchor="middle" class="svg-texto">expresión breve</text>
+        </svg>
+        <figcaption>El cuerpo es siempre el mismo rectángulo redondeado; lo que cambia es el icono de la esquina, que define el comportamiento al ejecutarse.</figcaption>
+      </figure>
+
+      <table class="tabla">
+        <thead><tr><th>Tarea</th><th>Icono</th><th>Quién la ejecuta</th><th>Analogía Spring</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Usuario</strong></td><td>Persona</td><td>Un humano: claim, complete vía formulario o REST.</td><td>Como una pantalla que espera la acción de un usuario.</td></tr>
+          <tr><td><strong>Servicio</strong></td><td>Engrane</td><td>Tu código: un método de un <code>@Bean</code> o una llamada REST.</td><td>Invocar un <code>@Service</code> que ya tienes inyectado.</td></tr>
+          <tr><td><strong>Regla de negocio</strong></td><td>Tabla</td><td>El motor de reglas Drools (DRL o DMN).</td><td>Externalizar un <code>if</code> gigante a reglas mantenibles.</td></tr>
+          <tr><td><strong>Script</strong></td><td>Documento</td><td>Una expresión corta evaluada en línea por el motor.</td><td>Una transformación trivial sin salir al servicio.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="aviso ojo">
+        <div class="titulo">⚠️ Ojo</div>
+        <p>La <strong>tarea de script</strong> es para lógica trivial (asignar una variable, formatear un texto). Si te descubres metiendo lógica de negocio importante en un script, casi siempre es señal de que debería ser una <strong>tarea de servicio</strong> (tu código, testeable con JUnit) o una <strong>tarea de regla</strong> (Drools). Mantén los scripts pequeños.</p>
+      </div>
+
+      <!-- ----- FAMILIA 3: GATEWAYS ----- -->
+      <h3>3. Gateways (compuertas) — el <em>control</em> del flujo</h3>
+      <p>Un <strong>gateway</strong> es un <strong>rombo</strong> y controla por dónde sigue el proceso: bifurca el camino o vuelve a unir varios. El símbolo dentro del rombo te dice qué clase de decisión toma. Estos son los tres que usarás todo el tiempo.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 640 180" role="img" aria-label="Tres gateways BPMN: exclusivo con equis, paralelo con cruz e inclusivo con círculo">
+          <!-- Exclusivo (X) -->
+          <path d="M100 25 L155 80 L100 135 L45 80 Z" fill="#fdf0d5" stroke="#b87900" stroke-width="2"></path>
+          <path d="M82 62 L118 98 M118 62 L82 98" stroke="#b87900" stroke-width="4" fill="none"></path>
+          <text x="100" y="162" text-anchor="middle" class="svg-texto-b">Exclusivo (XOR)</text>
+
+          <!-- Paralelo (+) -->
+          <path d="M320 25 L375 80 L320 135 L265 80 Z" fill="#fdf0d5" stroke="#b87900" stroke-width="2"></path>
+          <path d="M320 60 V100 M300 80 H340" stroke="#b87900" stroke-width="4" fill="none"></path>
+          <text x="320" y="162" text-anchor="middle" class="svg-texto-b">Paralelo (AND)</text>
+
+          <!-- Inclusivo (O) -->
+          <path d="M540 25 L595 80 L540 135 L485 80 Z" fill="#fdf0d5" stroke="#b87900" stroke-width="2"></path>
+          <circle cx="540" cy="80" r="18" fill="none" stroke="#b87900" stroke-width="4"></circle>
+          <text x="540" y="162" text-anchor="middle" class="svg-texto-b">Inclusivo (OR)</text>
+        </svg>
+        <figcaption>Mismo rombo, distinto símbolo interno. La <strong>X</strong> elige un solo camino; el <strong>+</strong> los abre todos a la vez; el <strong>O</strong> abre los que cumplan su condición.</figcaption>
+      </figure>
+
+      <table class="tabla">
+        <thead><tr><th>Gateway</th><th>Símbolo</th><th>Comportamiento</th><th>En Java sería…</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Exclusivo</strong> (XOR)</td><td>X</td><td>Toma <strong>un solo</strong> camino: el primero cuya condición es verdadera. El resto se ignora.</td><td>Un <code>if / else if / else</code>.</td></tr>
+          <tr><td><strong>Paralelo</strong> (AND)</td><td>+</td><td>Activa <strong>todos</strong> los caminos a la vez, sin condiciones. Al unir, espera a que todos terminen.</td><td>Lanzar varios hilos y hacer un <code>join</code>.</td></tr>
+          <tr><td><strong>Inclusivo</strong> (OR)</td><td>O</td><td>Activa <strong>uno o varios</strong> caminos: todos los que cumplan su condición.</td><td>Varios <code>if</code> independientes que pueden cumplirse a la vez.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="aviso alto">
+        <div class="titulo">⛔ Importante</div>
+        <p>En un gateway <strong>exclusivo</strong> siempre define una <strong>ruta por defecto</strong> (la que se toma si ninguna condición se cumple). Si olvidas el caso «ninguna condición es verdadera», la instancia se queda atascada sin saber por dónde seguir. Es el equivalente a un <code>switch</code> sin <code>default</code>.</p>
+      </div>
+
+      <!-- ----- FAMILIA 4: FLUJOS ----- -->
+      <h3>4. Flujos — las <em>conexiones</em></h3>
+      <p>Los flujos son las <strong>flechas</strong> que conectan todo lo anterior. Hay dos que debes distinguir bien: el flujo de secuencia (dentro de un mismo proceso) y el flujo de mensaje (entre procesos distintos).</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 620 150" role="img" aria-label="Flujo de secuencia con flecha sólida y flujo de mensaje con flecha punteada">
+          <!-- Secuencia: sólida -->
+          <line x1="40" y1="45" x2="240" y2="45" class="svg-flecha"></line>
+          <text x="140" y="30" text-anchor="middle" class="svg-texto-b">Flujo de secuencia</text>
+          <text x="140" y="75" text-anchor="middle" class="svg-texto">sólida · dentro del proceso</text>
+
+          <!-- Mensaje: punteada -->
+          <line x1="380" y1="45" x2="580" y2="45" stroke="#495567" stroke-width="2" stroke-dasharray="7 5" fill="none" marker-end="url(#flecha)"></line>
+          <text x="480" y="30" text-anchor="middle" class="svg-texto-b">Flujo de mensaje</text>
+          <text x="480" y="75" text-anchor="middle" class="svg-texto">punteada · entre procesos</text>
+
+          <text x="310" y="125" text-anchor="middle" class="svg-texto">La línea continua manda dentro de casa; la punteada cruza fronteras.</text>
+        </svg>
+        <figcaption>Una flecha sólida ordena el paso siguiente dentro del proceso. Una flecha punteada representa un mensaje que viaja entre dos participantes (pools) diferentes.</figcaption>
+      </figure>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota</div>
+        <p>Hay un tercer tipo, la <strong>asociación</strong> (línea de puntos finos), que solo enlaza anotaciones o datos a un elemento; no controla la ejecución. La verás de vez en cuando, pero las protagonistas son las dos de arriba.</p>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         3. Pools y Lanes
+         ===================================================== -->
+    <section class="seccion">
+      <h2>Pools y carriles: ¿quién hace cada cosa?</h2>
+      <p>Cuando un proceso involucra a varios <strong>responsables</strong> (un cliente, un cajero, un sistema), BPMN los organiza con <strong>pools</strong> y <strong>lanes</strong> (carriles). Un <strong>pool</strong> es un participante completo (toda una organización o sistema). Un <strong>lane</strong> es una subdivisión dentro del pool: típicamente un rol o departamento. La regla mental es sencilla: <em>cada cosa va en el carril de quien la ejecuta</em>.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 720 280" role="img" aria-label="Pool de cafetería con dos carriles: cliente y barista, mostrando un proceso que cruza ambos">
+          <!-- Pool -->
+          <rect x="20" y="20" width="680" height="240" fill="#ffffff" stroke="#004481" stroke-width="2"></rect>
+          <!-- Etiqueta vertical del pool -->
+          <rect x="20" y="20" width="34" height="240" fill="#072146" stroke="#004481" stroke-width="2"></rect>
+          <text x="37" y="140" text-anchor="middle" transform="rotate(-90 37 140)" fill="#ffffff" class="svg-texto-b">Cafetería</text>
+
+          <!-- Línea divisoria entre carriles -->
+          <line x1="54" y1="140" x2="700" y2="140" stroke="#004481" stroke-width="1.5"></line>
+          <!-- Etiquetas de carriles -->
+          <rect x="54" y="20" width="30" height="120" fill="#eef3f9" stroke="#004481" stroke-width="1.5"></rect>
+          <text x="69" y="80" text-anchor="middle" transform="rotate(-90 69 80)" class="svg-texto-b">Cliente</text>
+          <rect x="54" y="140" width="30" height="120" fill="#eef3f9" stroke="#004481" stroke-width="1.5"></rect>
+          <text x="69" y="200" text-anchor="middle" transform="rotate(-90 69 200)" class="svg-texto-b">Barista</text>
+
+          <!-- Carril Cliente -->
+          <circle cx="130" cy="80" r="20" fill="#eefaf2" stroke="#1f9d55" stroke-width="2"></circle>
+          <rect x="200" y="58" width="130" height="44" rx="10" class="svg-borde" fill="#e3f0fb"></rect>
+          <text x="265" y="85" text-anchor="middle" class="svg-texto-b">Hacer pedido</text>
+
+          <!-- Carril Barista -->
+          <rect x="420" y="178" width="140" height="44" rx="10" class="svg-borde" fill="#e3f0fb"></rect>
+          <text x="490" y="205" text-anchor="middle" class="svg-texto-b">Preparar café</text>
+          <circle cx="640" cy="200" r="20" fill="#fdeeee" stroke="#d64545" stroke-width="4"></circle>
+
+          <!-- Flujos de secuencia -->
+          <line x1="150" y1="80" x2="200" y2="80" class="svg-flecha"></line>
+          <line x1="330" y1="80" x2="490" y2="80" class="svg-flecha"></line>
+          <line x1="490" y1="80" x2="490" y2="178" class="svg-flecha"></line>
+          <line x1="560" y1="200" x2="620" y2="200" class="svg-flecha"></line>
+        </svg>
+        <figcaption>Un pool «Cafetería» con dos carriles. La tarea «Hacer pedido» vive en el carril del cliente; «Preparar café», en el del barista. El flujo cruza de un carril al otro: así se ve de un vistazo quién es responsable de qué.</figcaption>
+      </figure>
+
+      <div class="puente">
+        <p>Si en Spring repartes responsabilidades en capas (<code class="en-linea">@Controller</code>, <code class="en-linea">@Service</code>, <code class="en-linea">@Repository</code>) para que cada clase tenga un único motivo de cambio, los <strong>carriles</strong> hacen lo mismo a nivel de proceso: separan <em>quién</em> hace qué. Leer un BPMN bien organizado por carriles es como leer un paquete bien organizado por responsabilidades.</p>
+      </div>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>Las flechas de <strong>secuencia</strong> (sólidas) pueden cruzar entre carriles del <em>mismo</em> pool sin problema. Pero entre <strong>pools distintos</strong> solo se comunican con flechas de <strong>mensaje</strong> (punteadas): cada pool es un proceso independiente que «conversa» con el otro, nunca le ordena directamente.</p>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         4. Mini-proceso completo: pedir un café
+         ===================================================== -->
+    <section class="seccion">
+      <h2>Un proceso completo, de izquierda a derecha</h2>
+      <p>Juntemos todo el alfabeto en una sola frase. Este es el proceso «pedir un café», leído como leerías una línea de texto: <strong>de izquierda a derecha</strong>. Fíjate cómo aparecen las cuatro familias: un evento de inicio, varias tareas, un gateway exclusivo que decide, y un evento de fin.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 980 240" role="img" aria-label="Proceso pedir un café: inicio, tomar pedido, decidir tamaño según presupuesto, preparar café grande o sencillo, entregar y fin">
+          <!-- Inicio -->
+          <circle cx="50" cy="110" r="26" fill="#eefaf2" stroke="#1f9d55" stroke-width="2"></circle>
+          <text x="50" y="160" text-anchor="middle" class="svg-texto">Llega cliente</text>
+
+          <!-- Tarea: tomar pedido (usuario) -->
+          <rect x="110" y="84" width="130" height="52" rx="12" class="svg-borde" fill="#e3f0fb"></rect>
+          <g stroke="#004481" stroke-width="1.6" fill="none">
+            <circle cx="124" cy="98" r="4"></circle>
+            <path d="M118 110 Q124 102 130 110"></path>
+          </g>
+          <text x="178" y="115" text-anchor="middle" class="svg-texto-b">Tomar pedido</text>
+
+          <!-- Gateway exclusivo -->
+          <path d="M330 80 L372 110 L330 140 L288 110 Z" fill="#fdf0d5" stroke="#b87900" stroke-width="2"></path>
+          <path d="M318 98 L342 122 M342 98 L318 122" stroke="#b87900" stroke-width="3.5" fill="none"></path>
+          <text x="330" y="168" text-anchor="middle" class="svg-texto">¿Premium?</text>
+
+          <!-- Tarea servicio: café grande (rama sí, arriba) -->
+          <rect x="430" y="30" width="150" height="50" rx="12" class="svg-borde" fill="#e3f0fb"></rect>
+          <g stroke="#004481" stroke-width="1.5" fill="none">
+            <circle cx="444" cy="44" r="5"></circle>
+            <path d="M444 38 V34 M444 50 V54 M438 44 H434 M450 44 H454"></path>
+          </g>
+          <text x="505" y="60" text-anchor="middle" class="svg-texto-b">Café grande</text>
+
+          <!-- Tarea servicio: café sencillo (rama no, abajo) -->
+          <rect x="430" y="140" width="150" height="50" rx="12" class="svg-borde" fill="#e3f0fb"></rect>
+          <g stroke="#004481" stroke-width="1.5" fill="none">
+            <circle cx="444" cy="154" r="5"></circle>
+            <path d="M444 148 V144 M444 160 V164 M438 154 H434 M450 154 H454"></path>
+          </g>
+          <text x="505" y="170" text-anchor="middle" class="svg-texto-b">Café sencillo</text>
+
+          <!-- Tarea: entregar -->
+          <rect x="680" y="84" width="130" height="52" rx="12" class="svg-borde" fill="#e3f0fb"></rect>
+          <text x="745" y="115" text-anchor="middle" class="svg-texto-b">Entregar</text>
+
+          <!-- Fin -->
+          <circle cx="910" cy="110" r="26" fill="#fdeeee" stroke="#d64545" stroke-width="4"></circle>
+          <text x="910" y="160" text-anchor="middle" class="svg-texto">Cliente feliz</text>
+
+          <!-- Flujos -->
+          <line x1="76" y1="110" x2="110" y2="110" class="svg-flecha"></line>
+          <line x1="240" y1="110" x2="288" y2="110" class="svg-flecha"></line>
+          <!-- a café grande (sí) -->
+          <path d="M330 80 L330 55 L430 55" class="svg-flecha"></path>
+          <text x="382" y="48" text-anchor="middle" class="svg-texto">sí</text>
+          <!-- a café sencillo (no, default) -->
+          <path d="M330 140 L330 165 L430 165" class="svg-flecha"></path>
+          <text x="378" y="182" text-anchor="middle" class="svg-texto">no (por defecto)</text>
+          <!-- unión hacia entregar -->
+          <path d="M580 55 L680 55 L680 100" class="svg-flecha"></path>
+          <path d="M580 165 L680 165 L680 120" class="svg-flecha"></path>
+          <line x1="810" y1="110" x2="884" y2="110" class="svg-flecha"></line>
+        </svg>
+        <figcaption>«Pedir un café» con todo el alfabeto: inicio (verde) → tarea de usuario → gateway exclusivo que pregunta «¿Premium?» → una de dos tareas de servicio → tarea de entrega → fin (rojo). Una sola frase visual, ejecutable tal cual.</figcaption>
+      </figure>
+
+      <ol class="pasos">
+        <li><strong>Inicio:</strong> llega el cliente. En Kogito, esto equivale a un <code class="en-linea">POST /pedirCafe</code> con los datos del pedido.</li>
+        <li><strong>Tomar pedido</strong> (tarea de usuario): el barista captura qué quiere el cliente.</li>
+        <li><strong>¿Premium?</strong> (gateway exclusivo): según el pedido, el flujo se bifurca hacia <em>una sola</em> rama. La rama «no» es la ruta por defecto.</li>
+        <li><strong>Preparar</strong> (tarea de servicio): se llama a tu código para preparar el café grande o el sencillo.</li>
+        <li><strong>Entregar</strong> y <strong>fin:</strong> el café llega a manos del cliente y la instancia del proceso concluye.</li>
+      </ol>
+
+      <div class="aviso">
+        <div class="titulo">ℹ️ Nota</div>
+        <p>Léelo en voz alta siguiendo las flechas: «Llega un cliente, se toma el pedido, <em>si</em> es premium se hace café grande, <em>si no</em> uno sencillo, se entrega y termina». Si suena como una frase coherente, el diagrama está bien construido. Esa legibilidad es justo el valor de BPMN.</p>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         5. ¿Cómo se ve por dentro?
+         ===================================================== -->
+    <section class="seccion">
+      <h2>Por dentro es solo XML</h2>
+      <p>Recuerda: ese dibujo no es una imagen, es un archivo <code class="en-linea">.bpmn</code> (XML) que Kogito empaqueta como parte de tu aplicación Spring Boot. No lo escribirás a mano —usarás un editor visual—, pero conviene perderle el miedo y ver que debajo hay etiquetas reconocibles para cada símbolo del alfabeto.</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">pedirCafe.bpmn</span></div>
+        <pre><code><span class="cmt">&lt;!-- Evento de inicio: el círculo verde --&gt;</span>
+<span class="kw">&lt;startEvent</span> <span class="typ">id</span>=<span class="str">"inicio"</span> <span class="typ">name</span>=<span class="str">"Llega cliente"</span><span class="kw">/&gt;</span>
+
+<span class="cmt">&lt;!-- Tarea de usuario: el rectángulo con icono de persona --&gt;</span>
+<span class="kw">&lt;userTask</span> <span class="typ">id</span>=<span class="str">"tomarPedido"</span> <span class="typ">name</span>=<span class="str">"Tomar pedido"</span><span class="kw">/&gt;</span>
+
+<span class="cmt">&lt;!-- Gateway exclusivo: el rombo con la X --&gt;</span>
+<span class="kw">&lt;exclusiveGateway</span> <span class="typ">id</span>=<span class="str">"esPremium"</span> <span class="typ">name</span>=<span class="str">"¿Premium?"</span><span class="kw">/&gt;</span>
+
+<span class="cmt">&lt;!-- Flujo de secuencia: la flecha sólida que conecta dos nodos --&gt;</span>
+<span class="kw">&lt;sequenceFlow</span> <span class="typ">sourceRef</span>=<span class="str">"inicio"</span> <span class="typ">targetRef</span>=<span class="str">"tomarPedido"</span><span class="kw">/&gt;</span>
+
+<span class="cmt">&lt;!-- Evento de fin: el círculo rojo de línea gruesa --&gt;</span>
+<span class="kw">&lt;endEvent</span> <span class="typ">id</span>=<span class="str">"fin"</span> <span class="typ">name</span>=<span class="str">"Cliente feliz"</span><span class="kw">/&gt;</span></code></pre>
+      </div>
+
+      <div class="puente">
+        <p>Es como la relación entre tu entidad JPA y el XML/anotaciones que la mapean: tú piensas en el modelo de dominio, no en el SQL. Aquí piensas en el proceso (el dibujo) y el XML es el detalle de implementación. Y el endpoint REST que arranca el proceso <strong>se autogenera</strong> a partir del <code class="en-linea">id</code> del proceso: no escribes ningún <code class="en-linea">@RestController</code> a mano.</p>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         6. Tabla resumen final
+         ===================================================== -->
+    <section class="seccion">
+      <h2>El alfabeto, de un vistazo</h2>
+      <p>Guarda esta tabla como tu chuleta. Si reconoces estos símbolos, ya puedes leer cualquier diagrama que te pongan enfrente en el resto del curso.</p>
+
+      <table class="tabla">
+        <thead><tr><th>Símbolo</th><th>Familia</th><th>Nombre</th><th>Cuándo se usa</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><svg viewBox="0 0 30 30" width="30" height="30"><circle cx="15" cy="15" r="11" fill="#eefaf2" stroke="#1f9d55" stroke-width="2"></circle></svg></td>
+            <td><span class="pildora verde">Evento</span></td>
+            <td>Inicio</td>
+            <td>Para arrancar el proceso (normalmente, una petición REST).</td>
+          </tr>
+          <tr>
+            <td><svg viewBox="0 0 30 30" width="30" height="30"><circle cx="15" cy="15" r="11" fill="#fff7e6" stroke="#b87900" stroke-width="2"></circle><circle cx="15" cy="15" r="7.5" fill="none" stroke="#b87900" stroke-width="2"></circle></svg></td>
+            <td><span class="pildora ambar">Evento</span></td>
+            <td>Intermedio</td>
+            <td>Esperar o lanzar algo en medio: mensaje, temporizador, señal.</td>
+          </tr>
+          <tr>
+            <td><svg viewBox="0 0 30 30" width="30" height="30"><circle cx="15" cy="15" r="11" fill="#fdeeee" stroke="#d64545" stroke-width="4"></circle></svg></td>
+            <td><span class="pildora rojo">Evento</span></td>
+            <td>Fin</td>
+            <td>Concluir el proceso o una de sus ramas.</td>
+          </tr>
+          <tr>
+            <td><svg viewBox="0 0 36 30" width="36" height="30"><rect x="3" y="5" width="30" height="20" rx="6" fill="#e3f0fb" stroke="#004481" stroke-width="2"></rect></svg></td>
+            <td><span class="pildora azul">Actividad</span></td>
+            <td>Tarea</td>
+            <td>Hacer el trabajo: usuario, servicio, regla o script (según el icono).</td>
+          </tr>
+          <tr>
+            <td><svg viewBox="0 0 36 30" width="36" height="30"><path d="M18 4 L32 15 L18 26 L4 15 Z" fill="#fdf0d5" stroke="#b87900" stroke-width="2"></path><path d="M12 9 L24 21 M24 9 L12 21" stroke="#b87900" stroke-width="2.5"></path></svg></td>
+            <td><span class="pildora ambar">Gateway</span></td>
+            <td>Exclusivo (X)</td>
+            <td>Elegir un único camino: el primero cuya condición es verdadera.</td>
+          </tr>
+          <tr>
+            <td><svg viewBox="0 0 36 30" width="36" height="30"><path d="M18 4 L32 15 L18 26 L4 15 Z" fill="#fdf0d5" stroke="#b87900" stroke-width="2"></path><path d="M18 8 V22 M11 15 H25" stroke="#b87900" stroke-width="2.5"></path></svg></td>
+            <td><span class="pildora ambar">Gateway</span></td>
+            <td>Paralelo (+)</td>
+            <td>Abrir todos los caminos a la vez y luego sincronizarlos.</td>
+          </tr>
+          <tr>
+            <td><svg viewBox="0 0 36 30" width="36" height="30"><path d="M18 4 L32 15 L18 26 L4 15 Z" fill="#fdf0d5" stroke="#b87900" stroke-width="2"></path><circle cx="18" cy="15" r="6" fill="none" stroke="#b87900" stroke-width="2.5"></circle></svg></td>
+            <td><span class="pildora ambar">Gateway</span></td>
+            <td>Inclusivo (O)</td>
+            <td>Abrir uno o varios caminos: todos los que cumplan su condición.</td>
+          </tr>
+          <tr>
+            <td><svg viewBox="0 0 40 30" width="40" height="30"><line x1="4" y1="15" x2="30" y2="15" stroke="#495567" stroke-width="2.5"></line><path d="M28 10 L37 15 L28 20 Z" fill="#495567"></path></svg></td>
+            <td><span class="pildora aqua">Flujo</span></td>
+            <td>Secuencia</td>
+            <td>Conectar pasos dentro del mismo proceso (flecha sólida).</td>
+          </tr>
+          <tr>
+            <td><svg viewBox="0 0 40 30" width="40" height="30"><line x1="4" y1="15" x2="30" y2="15" stroke="#495567" stroke-width="2.5" stroke-dasharray="5 4"></line><path d="M28 10 L37 15 L28 20 Z" fill="none" stroke="#495567" stroke-width="2"></path></svg></td>
+            <td><span class="pildora aqua">Flujo</span></td>
+            <td>Mensaje</td>
+            <td>Comunicar dos pools (participantes) distintos (flecha punteada).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Tip</div>
+        <p>No necesitas memorizar las decenas de variantes que existen en el estándar completo. Con estos nueve símbolos cubres la inmensa mayoría de los procesos reales. El resto los irás reconociendo cuando aparezcan, ya con esta base bien asentada.</p>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         Cierre
+         ===================================================== -->
+    <section class="seccion">
+      <h2>Lo que te llevas</h2>
+      <div class="chips">
+        <span class="chip"><span class="bpmn-evento">●</span> Eventos = círculos (algo sucede)</span>
+        <span class="chip"><span class="bpmn-tarea">▭</span> Tareas = rectángulos redondeados (algo se hace)</span>
+        <span class="chip"><span class="bpmn-gateway">◆</span> Gateways = rombos (algo se decide)</span>
+        <span class="chip"><span class="bpmn-flujo">→</span> Flujos = flechas (todo se conecta)</span>
+      </div>
+      <p>Ya lees el alfabeto. En el siguiente tema pasamos de leerlo a <strong>escribirlo y ejecutarlo</strong>: construirás tu primer proceso en Kogito y verás cómo su <strong>API REST se genera sola</strong>, sin que escribas un solo controlador.</p>
+    </section>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="02-de-springboot-a-kogito.html"><div class="dir">← Anterior</div><div class="tit">De Spring Boot a Kogito</div></a>
+    <a href="04-primer-proceso-rest.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">Tu primer proceso y su API REST</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot · Java 21</span>
+  </footer>
+
+</body>
+</html>

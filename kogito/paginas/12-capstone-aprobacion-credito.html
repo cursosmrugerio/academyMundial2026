@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proyecto final · Capstone: proceso de aprobación de crédito — Procesos de Negocio con Kogito</title>
+  <link rel="stylesheet" href="../assets/estilos.css">
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <nav class="barra">
+    <span class="marca"><span class="punto"></span> Procesos de Negocio con Kogito <small class="oculta-movil">· academy 2026</small></span>
+    <span class="crece"></span>
+    <a href="../index.html">Índice</a>
+    <a href="11-testing-proceso.html" class="oculta-movil">← Anterior</a>
+    <a href="../index.html">Siguiente →</a>
+  </nav>
+
+  <!-- Cabecera con degradado -->
+  <header class="cabecera">
+    <span class="etiqueta">Proyecto final</span>
+    <h1>Capstone: proceso de aprobación de crédito</h1>
+    <p class="bajada">Es la hora de juntar todas las piezas. Vamos a construir un proceso bancario real, ejecutable de punta a punta: una solicitud entra por REST, unas reglas calculan el <em>score</em>, una compuerta decide el destino y, cuando hace falta, un analista humano da el visto bueno. Todo lo que viste en el curso, vivo en un solo proyecto Maven.</p>
+  </header>
+
+  <main class="envoltura">
+
+    <section class="seccion">
+      <h2>El caso: «Crédito Express» del banco</h2>
+      <p>Imagina la mesa de crédito de un banco. Un cliente solicita un préstamo desde la banca en línea. El proceso debe, en segundos, decidir entre tres desenlaces: <span class="pildora verde">APROBADO</span> (desembolso inmediato), <span class="pildora rojo">RECHAZADO</span> (no califica) o <span class="pildora ambar">REVISION</span> (un caso de frontera que un analista de carne y hueso debe mirar antes de resolver).</p>
+
+      <p>Eso es exactamente lo que vamos a modelar. El proyecto se llama <code class="en-linea">aprobacion-credito</code>, el proceso tiene <code class="en-linea">processId = aprobacionCredito</code> y su endpoint —que, como ya sabes, <strong>se autogenera</strong>— responde en <code class="en-linea">POST /aprobacionCredito</code>. La lógica de puntaje vive en una decisión DMN llamada <code class="en-linea">scoringCredito</code>. Las variables del proceso son dos: <code class="en-linea">solicitud</code> (lo que manda el cliente) y <code class="en-linea">evaluacion</code> (lo que produce la decisión).</p>
+
+      <div class="puente">
+        <p>Si esto fuera un microservicio de Spring puro, tendrías un <code class="en-linea">@RestController</code> con la solicitud, un <code class="en-linea">@Service</code> con los <code class="en-linea">if</code> del puntaje, una cola o tabla para los casos en revisión y un controlador extra para que el analista los resuelva. Aquí, el <strong>diagrama del proceso es el orquestador</strong>: el endpoint, el enrutamiento, la tarea humana y la espera los pone Kogito. Tú aportas el modelo de datos, las reglas y, si quieres, algún servicio de apoyo.</p>
+      </div>
+
+      <div class="chips">
+        <span class="chip bpmn-evento">
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#eefaf2" stroke="#1f9d55" stroke-width="2"></circle></svg>
+          Inicio / Fin = eventos
+        </span>
+        <span class="chip bpmn-tarea">
+          <svg class="ico" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="3" fill="#eef3f9" stroke="#004481" stroke-width="2"></rect></svg>
+          Reglas y tarea humana = tareas
+        </span>
+        <span class="chip bpmn-gateway">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M12 2 L22 12 L12 22 L2 12 Z" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></path></svg>
+          Decisión = gateway exclusivo
+        </span>
+        <span class="chip bpmn-flujo">
+          <svg class="ico" viewBox="0 0 24 24"><line x1="3" y1="12" x2="18" y2="12" stroke="#495567" stroke-width="2"></line><path d="M16,8 L22,12 L16,16 Z" fill="#495567"></path></svg>
+          Flujo de secuencia
+        </span>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>El proceso completo, de izquierda a derecha</h2>
+      <p>Este es el corazón del capstone: el flujo de punta a punta. Léelo como una historia. Entra una solicitud por la izquierda; una tarea de reglas la evalúa con la decisión DMN; un gateway exclusivo lee <code class="en-linea">evaluacion.decision</code> y abre tres caminos; dos terminan de inmediato y el tercero pasa por un analista humano antes de cerrar.</p>
+
+      <figure class="diagrama">
+        <svg viewBox="0 0 980 360" role="img" aria-label="Proceso de aprobación de crédito de punta a punta: inicio, tarea de reglas que evalúa el score con la decisión DMN scoringCredito, gateway exclusivo según evaluacion.decision con tres ramas (aprobado y rechazado terminan de inmediato; revisión pasa por una tarea humana del grupo analistas antes de su fin)">
+          <defs>
+            <marker id="flecha" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#495567"></path>
+            </marker>
+          </defs>
+
+          <!-- Inicio -->
+          <circle cx="44" cy="180" r="22" class="svg-borde" fill="#eefaf2" stroke="#1f9d55"></circle>
+          <text x="44" y="186" text-anchor="middle" class="svg-texto-b">▶</text>
+          <text x="44" y="228" text-anchor="middle" class="svg-texto">Inicio</text>
+          <text x="44" y="244" text-anchor="middle" class="svg-texto">(solicitud)</text>
+
+          <!-- Business Rule Task -->
+          <rect x="120" y="148" width="190" height="64" rx="12" class="svg-borde svg-relleno"></rect>
+          <text x="215" y="170" text-anchor="middle" class="svg-texto-b">Evaluar score</text>
+          <text x="215" y="190" text-anchor="middle" class="svg-texto">Business Rule Task</text>
+          <text x="215" y="206" text-anchor="middle" class="svg-texto">DMN: scoringCredito</text>
+          <!-- marca de tabla/reglas en la esquina -->
+          <rect x="128" y="156" width="16" height="13" rx="2" fill="none" stroke="#004481" stroke-width="1.5"></rect>
+          <line x1="128" y1="161" x2="144" y2="161" stroke="#004481" stroke-width="1.5"></line>
+          <line x1="133" y1="156" x2="133" y2="169" stroke="#004481" stroke-width="1.5"></line>
+
+          <!-- Gateway exclusivo -->
+          <path d="M380 180 L420 142 L460 180 L420 218 Z" fill="#fff7e6" stroke="#f0a202" stroke-width="2"></path>
+          <line x1="406" y1="166" x2="434" y2="194" stroke="#b87900" stroke-width="2.5"></line>
+          <line x1="434" y1="166" x2="406" y2="194" stroke="#b87900" stroke-width="2.5"></line>
+          <text x="420" y="240" text-anchor="middle" class="svg-texto">evaluacion.decision?</text>
+
+          <!-- Rama APROBADO -->
+          <circle cx="900" cy="56" r="22" class="svg-borde" fill="#e3f7ec" stroke="#1f9d55" stroke-width="3.5"></circle>
+          <text x="900" y="62" text-anchor="middle" class="svg-texto-b">■</text>
+          <text x="900" y="98" text-anchor="middle" class="svg-texto">Fin aprobado</text>
+
+          <!-- Rama RECHAZADO -->
+          <circle cx="900" cy="180" r="22" class="svg-borde" fill="#fde6e6" stroke="#d64545" stroke-width="3.5"></circle>
+          <text x="900" y="186" text-anchor="middle" class="svg-texto-b">■</text>
+          <text x="900" y="222" text-anchor="middle" class="svg-texto">Fin rechazado</text>
+
+          <!-- Rama REVISION: User Task -->
+          <rect x="560" y="276" width="210" height="64" rx="12" class="svg-borde" fill="#fdf0d5" stroke="#b87900"></rect>
+          <text x="665" y="298" text-anchor="middle" class="svg-texto-b">Revisión del analista</text>
+          <text x="665" y="318" text-anchor="middle" class="svg-texto">User Task</text>
+          <text x="665" y="334" text-anchor="middle" class="svg-texto">grupo: analistas</text>
+          <!-- marca de persona en la esquina -->
+          <circle cx="576" cy="288" r="3.5" fill="none" stroke="#b87900" stroke-width="1.5"></circle>
+          <path d="M570 298 a6 6 0 0 1 12 0" fill="none" stroke="#b87900" stroke-width="1.5"></path>
+          <!-- Fin revisión -->
+          <circle cx="900" cy="308" r="22" class="svg-borde" fill="#fdf0d5" stroke="#b87900" stroke-width="3.5"></circle>
+          <text x="900" y="314" text-anchor="middle" class="svg-texto-b">■</text>
+          <text x="900" y="350" text-anchor="middle" class="svg-texto">Fin revisado</text>
+
+          <!-- Flechas principales -->
+          <line x1="66" y1="180" x2="118" y2="180" class="svg-flecha"></line>
+          <line x1="310" y1="180" x2="378" y2="180" class="svg-flecha"></line>
+
+          <!-- Gateway -> APROBADO -->
+          <path d="M455 165 C 600 60, 720 56, 876 56" class="svg-flecha"></path>
+          <text x="600" y="48" text-anchor="middle" class="svg-texto">APROBADO</text>
+          <!-- Gateway -> RECHAZADO -->
+          <line x1="460" y1="180" x2="876" y2="180" class="svg-flecha"></line>
+          <text x="640" y="172" text-anchor="middle" class="svg-texto">RECHAZADO</text>
+          <!-- Gateway -> REVISION (user task) -->
+          <path d="M455 195 C 500 270, 520 308, 558 308" class="svg-flecha"></path>
+          <text x="505" y="262" text-anchor="middle" class="svg-texto">REVISION</text>
+          <!-- User Task -> Fin revisión -->
+          <line x1="770" y1="308" x2="876" y2="308" class="svg-flecha"></line>
+        </svg>
+        <figcaption>Proceso <code class="en-linea">aprobacionCredito</code> de punta a punta. La tarea de reglas deja el veredicto en <code class="en-linea">evaluacion.decision</code>; el gateway exclusivo abre tres ramas. <strong>APROBADO</strong> y <strong>RECHAZADO</strong> son automáticas; <strong>REVISION</strong> espera la mano de un analista del grupo <code class="en-linea">analistas</code>.</figcaption>
+      </figure>
+
+      <h3>Cada pieza y el tema del curso que le corresponde</h3>
+      <p>Lo bonito del capstone es que cada figura del diagrama es un tema que ya estudiaste. Esta tabla es tu mapa: pieza por pieza, dónde lo aprendiste.</p>
+
+      <table class="tabla">
+        <thead>
+          <tr><th>Pieza del diagrama</th><th>Elemento BPMN</th><th>Tema del curso</th><th>Qué hace aquí</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Inicio</strong></td>
+            <td>Evento de inicio (none)</td>
+            <td>Eventos · Primer proceso por REST</td>
+            <td>Recibe el <code>POST</code> y crea la instancia con la variable <code>solicitud</code> ya cargada.</td>
+          </tr>
+          <tr>
+            <td><strong>Evaluar score</strong></td>
+            <td>Business Rule Task</td>
+            <td>Business Rule Task / DMN</td>
+            <td>Invoca la decisión <code>scoringCredito</code>, calcula el <em>score</em> y deja el resultado en <code>evaluacion</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>¿decision?</strong></td>
+            <td>Gateway exclusivo (XOR)</td>
+            <td>Gateways y decisiones</td>
+            <td>Lee <code>evaluacion.decision</code> y enruta a una sola de las tres ramas.</td>
+          </tr>
+          <tr>
+            <td><strong>Revisión del analista</strong></td>
+            <td>User Task (grupo <code>analistas</code>)</td>
+            <td>Tareas humanas</td>
+            <td>Pausa el proceso y espera la resolución de una persona; expone endpoints de tarea autogenerados.</td>
+          </tr>
+          <tr>
+            <td><strong>solicitud / evaluacion</strong></td>
+            <td>Variables del proceso</td>
+            <td>Variables y datos</td>
+            <td><code>solicitud</code> es la entrada (tag <code>input</code>); <code>evaluacion</code> es la salida (tag <code>output</code>).</td>
+          </tr>
+          <tr>
+            <td><strong>Fin aprobado / rechazado / revisado</strong></td>
+            <td>Eventos de fin</td>
+            <td>Eventos</td>
+            <td>Cierran la instancia. La respuesta del REST trae el estado final del proceso y sus variables.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="aviso tip"><div class="titulo">✅ Tip</div><p>Fíjate en la separación de responsabilidades: el <strong>«qué decidir»</strong> (el puntaje, el umbral) vive en el <strong>DMN</strong>, y el <strong>«por dónde seguir»</strong> vive en el <strong>gateway</strong>. Mantenerlos separados hace que un cambio de política de riesgo se haga tocando solo la tabla de decisión, sin redibujar el proceso. Es el mismo principio de no mezclar reglas de negocio con enrutamiento que ya aplicas en Spring.</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>Estructura del proyecto Maven</h2>
+      <p>El proyecto es un Spring Boot normal, con un detalle: dentro de <code class="en-linea">src/main/resources</code> conviven los recursos de Kogito (el <code class="en-linea">.bpmn2</code> y el <code class="en-linea">.dmn</code>) junto al <code class="en-linea">application.properties</code> de siempre. En tiempo de compilación, Kogito lee esos archivos y genera el endpoint y el cableado. Tú no escribes ningún controlador.</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">proyecto/aprobacion-credito/</span></div>
+        <pre><code>aprobacion-credito/
+├── pom.xml
+├── src/
+│   ├── main/
+│   │   ├── java/com/academy/kogito/
+│   │   │   ├── <span class="typ">Application.java</span>              <span class="cmt"># @SpringBootApplication</span>
+│   │   │   ├── model/
+│   │   │   │   ├── <span class="typ">SolicitudCredito.java</span>     <span class="cmt"># variable "solicitud" (entrada)</span>
+│   │   │   │   └── <span class="typ">Evaluacion.java</span>           <span class="cmt"># variable "evaluacion" (salida del DMN)</span>
+│   │   │   └── service/
+│   │   │       └── <span class="typ">DesembolsoService.java</span>    <span class="cmt"># @Service de apoyo (opcional)</span>
+│   │   └── resources/
+│   │       ├── <span class="str">aprobacionCredito.bpmn2</span>      <span class="cmt"># el proceso (processId: aprobacionCredito)</span>
+│   │       ├── <span class="str">scoringCredito.dmn</span>           <span class="cmt"># la decisión de puntaje</span>
+│   │       └── <span class="str">application.properties</span>
+│   └── test/
+│       └── java/com/academy/kogito/
+│           ├── <span class="typ">AprobacionCreditoProcessTest.java</span>   <span class="cmt"># prueba el flujo completo</span>
+│           ├── <span class="typ">ScoringCreditoDecisionTest.java</span>     <span class="cmt"># prueba el DMN aislado</span>
+│           └── <span class="typ">DesembolsoServiceTest.java</span>          <span class="cmt"># JUnit + Mockito</span></code></pre>
+      </div>
+
+      <div class="aviso"><div class="titulo">ℹ️ Nota</div><p>La extensión <code class="en-linea">.bpmn2</code> y <code class="en-linea">.dmn</code> es lo que Kogito busca en el <em>classpath</em> al compilar. El <strong>nombre del archivo no fija el <code>processId</code></strong>: el <code>processId</code> es un atributo dentro del XML del proceso (aquí, <code>aprobacionCredito</code>) y es ese identificador el que define la ruta del endpoint, no el nombre del archivo.</p></div>
+
+      <h3>El modelo de datos: lo que ya sabes de POJOs y JPA</h3>
+      <p>Las variables del proceso son POJOs de Java. <code class="en-linea">SolicitudCredito</code> es lo que el cliente manda; <code class="en-linea">Evaluacion</code> es lo que la decisión produce y lo que el gateway consulta. Son clases planas, sin magia.</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">model/SolicitudCredito.java</span></div>
+        <pre><code><span class="kw">package</span> com.academy.kogito.model;
+
+<span class="kw">public class</span> <span class="typ">SolicitudCredito</span> {
+    <span class="kw">private</span> <span class="typ">String</span> nombre;
+    <span class="kw">private</span> <span class="kw">int</span> edad;
+    <span class="kw">private</span> <span class="typ">BigDecimal</span> ingresosMensuales;
+    <span class="kw">private</span> <span class="typ">BigDecimal</span> montoSolicitado;
+    <span class="kw">private</span> <span class="kw">int</span> plazoMeses;
+    <span class="kw">private</span> <span class="kw">boolean</span> tieneMora;
+
+    <span class="cmt">// getters y setters — Kogito (de)serializa con estos</span>
+}</code></pre>
+      </div>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">model/Evaluacion.java</span></div>
+        <pre><code><span class="kw">package</span> com.academy.kogito.model;
+
+<span class="kw">public class</span> <span class="typ">Evaluacion</span> {
+    <span class="kw">private</span> <span class="kw">int</span> score;          <span class="cmt">// puntaje calculado por el DMN</span>
+    <span class="kw">private</span> <span class="typ">String</span> decision;     <span class="cmt">// "APROBADO" | "RECHAZADO" | "REVISION"</span>
+    <span class="kw">private</span> <span class="typ">String</span> motivo;       <span class="cmt">// texto explicativo</span>
+
+    <span class="cmt">// getters y setters</span>
+}</code></pre>
+      </div>
+
+      <div class="puente">
+        <p>Estos POJOs son tus <code class="en-linea">@Entity</code>/DTO de toda la vida, pero <strong>sin anotaciones de persistencia obligatorias</strong> para que el proceso funcione. El estado del proceso se guarda como variables; si más adelante activas la persistencia JDBC, esas variables se serializan a PostgreSQL <em>sin que cambies el POJO</em>. Lo mismo que cuando pasas un DTO a JSON: el motor hace el <em>(de)serialize</em> por ti.</p>
+      </div>
+
+      <h3>La decisión DMN: scoringCredito</h3>
+      <p>El DMN recibe la <code class="en-linea">solicitud</code> como <em>input data</em> y produce una decisión final con el puntaje y el veredicto. En el editor lo dibujas como una tabla de decisión con política de aciertos <strong>First</strong> (gana la primera fila que coincida). Conceptualmente, la lógica es esta:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">scoringCredito — tabla de decisión (FEEL)</span></div>
+        <pre><code><span class="cmt">// Decisión "Evaluacion" · Hit policy: First (F)</span>
+<span class="cmt">// Inputs (de la solicitud):  edad, ingresosMensuales, montoSolicitado, tieneMora</span>
+
+<span class="cmt">// Regla 1 — descarte por mora</span>
+tieneMora = true                                  →  { score: 350,  decision: <span class="str">"RECHAZADO"</span>, motivo: <span class="str">"Mora vigente"</span> }
+
+<span class="cmt">// Regla 2 — capacidad de pago holgada → aprobado directo</span>
+montoSolicitado &lt;= ingresosMensuales * 6          →  { score: 760,  decision: <span class="str">"APROBADO"</span>,  motivo: <span class="str">"Capacidad suficiente"</span> }
+
+<span class="cmt">// Regla 3 — caso de frontera → lo ve un analista</span>
+montoSolicitado &lt;= ingresosMensuales * 12         →  { score: 650,  decision: <span class="str">"REVISION"</span>,  motivo: <span class="str">"Monto alto: revisar"</span> }
+
+<span class="cmt">// Regla por defecto — sobreendeudamiento</span>
+<span class="kw">otherwise</span>                                         →  { score: 480,  decision: <span class="str">"RECHAZADO"</span>, motivo: <span class="str">"Monto excede capacidad"</span> }</code></pre>
+      </div>
+
+      <div class="aviso ojo"><div class="titulo">⚠️ Ojo</div><p>En FEEL los nombres con espacios son válidos (<code class="en-linea">ingresos mensuales</code>), pero para que el <em>binding</em> con tu POJO sea limpio, nombra los <em>input data</em> del DMN igual que las propiedades de <code class="en-linea">SolicitudCredito</code>. Aquí mantenemos <code class="en-linea">ingresosMensuales</code>, <code class="en-linea">montoSolicitado</code> y <code class="en-linea">tieneMora</code> idénticos a los <em>getters</em> del POJO.</p></div>
+
+      <h3>«Evaluar score»: el cálculo de la decisión</h3>
+      <p>En este proyecto, la tarea <strong>Evaluar score</strong> es una <em>Script Task</em> que calcula el <code class="en-linea">score</code> y la <code class="en-linea">decision</code> en Java a partir de <code class="en-linea">solicitud</code> y deja el resultado en la variable <code class="en-linea">evaluacion</code>. Se hace así para que el ejemplo corra sin configuración extra y de forma determinista. La <strong>misma lógica de negocio</strong> está modelada como decisión <strong>DMN</strong> (<code class="en-linea">scoringCredito.dmn</code>), desplegada como servicio independiente (<code class="en-linea">POST /scoringCredito</code>) y probada de forma aislada en <code class="en-linea">ScoringDmnTest</code>.</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">aprobacionCredito.bpmn2 — Script Task «Evaluar score» (fragmento)</span></div>
+        <pre><code><span class="kw">int</span> score = puntosIngresos + puntosRatio + puntosEdad + puntosMora;
+<span class="typ">String</span> decision = score &gt;= <span class="str">70</span> ? <span class="str">"APROBADO"</span>
+               : score &gt;= <span class="str">50</span> ? <span class="str">"REVISION"</span>
+               : <span class="str">"RECHAZADO"</span>;
+
+<span class="typ">Evaluacion</span> e = <span class="kw">new</span> <span class="typ">Evaluacion</span>();
+e.setScore(score); e.setDecision(decision); e.setMotivo(motivo);
+kcontext.setVariable(<span class="str">"evaluacion"</span>, e);</code></pre>
+      </div>
+
+      <div class="puente">
+        <p>En un despliegue productivo, «Evaluar score» sería una <strong>Business Rule Task</strong> que <em>invoca</em> el DMN <code class="en-linea">scoringCredito</code> (por su <em>namespace</em> <code class="en-linea">https://academy.com/dmn/scoringCredito</code> y su nombre <code class="en-linea">scoringCredito</code>) en lugar de calcular dentro del proceso. Es la misma decisión, externalizada y editable por el área de negocio — justo lo del Tema&nbsp;08.</p>
+      </div>
+
+      <p>Y la condición de cada salida del gateway exclusivo, sobre <code class="en-linea">evaluacion.decision</code>:</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">Condiciones del gateway (dialecto Java)</span></div>
+        <pre><code><span class="cmt">// Flujo → Fin aprobado</span>
+<span class="str">"APROBADO"</span>.equals(evaluacion.getDecision())
+
+<span class="cmt">// Flujo → Revisión del analista (User Task)</span>
+<span class="str">"REVISION"</span>.equals(evaluacion.getDecision())
+
+<span class="cmt">// Flujo → Fin rechazado   ➜  marcado como "Por defecto", sin expresión (tu else)</span></code></pre>
+      </div>
+
+      <h3>application.properties</h3>
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">src/main/resources/application.properties</span></div>
+        <pre><code><span class="cmt"># Puerto estándar de Spring Boot</span>
+server.port=8080
+
+<span class="cmt"># Nombre de la app y registro</span>
+spring.application.name=aprobacion-credito
+
+<span class="cmt"># En desarrollo, el estado del proceso vive en memoria.</span>
+<span class="cmt"># Para PostgreSQL, se añade el addon de persistencia JDBC (ver checklist final).</span>
+kogito.persistence.type=inmemory</code></pre>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>Cómo ejecutarlo, paso a paso</h2>
+      <p>Con el proyecto en tu máquina y un JDK 21 instalado, el ciclo es idéntico al de cualquier Spring Boot. La diferencia es que el endpoint ya está listo sin que escribas un controlador.</p>
+
+      <ol class="pasos">
+        <li>
+          <strong>Levanta la aplicación.</strong> Desde la carpeta del proyecto, modo desarrollo de Spring Boot:
+          <div class="codigo">
+            <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">terminal</span></div>
+            <pre><code>cd proyecto/aprobacion-credito
+mvn spring-boot:run</code></pre>
+          </div>
+          <p>En el arranque, Kogito compila <code class="en-linea">aprobacionCredito.bpmn2</code> y <code class="en-linea">scoringCredito.dmn</code> y publica el endpoint <code class="en-linea">POST /aprobacionCredito</code>.</p>
+        </li>
+        <li>
+          <strong>Arranca un proceso con un <code class="en-linea">POST</code>.</strong> El cuerpo es el JSON de la <code class="en-linea">SolicitudCredito</code> envuelto en la variable <code class="en-linea">solicitud</code>:
+          <div class="codigo">
+            <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">curl — solicitud que cae en REVISION</span></div>
+            <pre><code>curl -i -X POST http://localhost:8080/aprobacionCredito \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "solicitud": {
+      "nombre": "Ana López",
+      "edad": 34,
+      "ingresosMensuales": 25000,
+      "montoSolicitado": 220000,
+      "plazoMeses": 36,
+      "tieneMora": false
+    }
+  }'</span></code></pre>
+          </div>
+        </li>
+        <li>
+          <strong>Observa la decisión.</strong> Según el monto frente a los ingresos, el desenlace cambia. Con <code class="en-linea">220000</code> contra <code class="en-linea">25000</code> de ingreso (entre 6× y 12×), cae en <span class="pildora ambar">REVISION</span> y el proceso queda <strong>activo</strong> esperando al analista. La respuesta trae el <code class="en-linea">id</code> de la instancia y las variables:
+          <div class="codigo">
+            <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">respuesta · HTTP 201 Created</span></div>
+            <pre><code>HTTP/1.1 201
+Content-Type: application/json
+
+{
+  <span class="str">"id"</span>: <span class="str">"a1b2c3d4-0001-4f10-9a77-2c0e9f5b1234"</span>,
+  <span class="str">"solicitud"</span>: { <span class="str">"nombre"</span>: <span class="str">"Ana López"</span>, <span class="str">"montoSolicitado"</span>: 220000, ... },
+  <span class="str">"evaluacion"</span>: { <span class="str">"score"</span>: 650, <span class="str">"decision"</span>: <span class="str">"REVISION"</span>, <span class="str">"motivo"</span>: <span class="str">"Monto alto: revisar"</span> }
+}</code></pre>
+          </div>
+          <p>Si en cambio mandas un monto pequeño (por ejemplo <code class="en-linea">120000</code>), la decisión es <span class="pildora verde">APROBADO</span>, no hay tarea humana y el proceso termina al instante: la respuesta es <strong>HTTP 201</strong> con el estado final. Si mandas <code class="en-linea">tieneMora: true</code>, es <span class="pildora rojo">RECHAZADO</span> de inmediato.</p>
+        </li>
+        <li>
+          <strong>Consulta y completa la tarea por REST.</strong> Para los casos en REVISION, los endpoints de tarea humana también se autogeneran. Primero listas la tarea pendiente de la instancia:
+          <div class="codigo">
+            <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">curl — listar tareas de la instancia</span></div>
+            <pre><code>curl http://localhost:8080/aprobacionCredito/<span class="typ">{id}</span>/tasks?user=marta&amp;group=analistas</code></pre>
+          </div>
+          <p>Eso devuelve el <code class="en-linea">taskId</code> de la tarea <code class="en-linea">RevisionAnalista</code>. La tomas y la completas con la decisión del analista (aprobar o rechazar):</p>
+          <div class="codigo">
+            <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">curl — completar la tarea</span></div>
+            <pre><code><span class="cmt"># Tomar la tarea (claim)</span>
+curl -X POST <span class="str">"http://localhost:8080/aprobacionCredito/{id}/RevisionAnalista/{taskId}/phases/claim?user=marta&amp;group=analistas"</span>
+
+<span class="cmt"># Completar con el veredicto humano</span>
+curl -X POST <span class="str">"http://localhost:8080/aprobacionCredito/{id}/RevisionAnalista/{taskId}?user=marta&amp;group=analistas"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{ "aprobadoPorAnalista": true, "comentario": "Cliente con buen historial" }'</span></code></pre>
+          </div>
+          <p>Al completarse la tarea, el proceso avanza a su fin de revisión y la instancia se cierra. Si no había tarea (caso APROBADO o RECHAZADO directo), este paso simplemente no aplica.</p>
+        </li>
+        <li>
+          <strong>Corre las pruebas.</strong> El proyecto incluye pruebas que cubren el flujo completo, la decisión aislada y el servicio de apoyo:
+          <div class="codigo">
+            <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">terminal</span></div>
+            <pre><code>mvn test</code></pre>
+          </div>
+        </li>
+      </ol>
+
+      <div class="aviso alto"><div class="titulo">⛔ Importante</div><p>El cuerpo del <code class="en-linea">POST</code> usa la <strong>variable del proceso</strong> como clave de primer nivel: <code class="en-linea">{ "solicitud": { ... } }</code>, no los campos sueltos en la raíz. Si mandas <code class="en-linea">{ "nombre": ..., "monto": ... }</code> directamente, Kogito no encontrará la variable <code class="en-linea">solicitud</code> y la evaluación trabajará con datos nulos. Mismo cuidado que con el <em>binding</em> del <code class="en-linea">@RequestBody</code>: la forma del JSON debe calzar con la estructura esperada.</p></div>
+    </section>
+
+    <section class="seccion">
+      <h2>Las pruebas: JUnit y Mockito, como siempre</h2>
+      <p>Probar el proceso no requiere nada exótico. Inyectas el proceso generado, arrancas una instancia con datos y verificas el estado y las variables. Para la decisión, evalúas el modelo DMN directamente. Y para tu servicio de apoyo, JUnit + Mockito de toda la vida.</p>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">test/AprobacionCreditoProcessTest.java</span></div>
+        <pre><code><span class="anot">@SpringBootTest</span>
+<span class="kw">class</span> <span class="typ">AprobacionCreditoProcessTest</span> {
+
+    <span class="anot">@Autowired</span> <span class="cmt">// el proceso se genera al compilar y se publica como bean</span>
+    <span class="typ">Process</span>&lt;? <span class="kw">extends</span> <span class="typ">Model</span>&gt; aprobacionCredito;
+
+    <span class="anot">@Test</span>
+    <span class="kw">void</span> <span class="typ">aprobadoCuandoElMontoEsHolgado</span>() {
+        <span class="kw">var</span> solicitud = <span class="kw">new</span> <span class="typ">SolicitudCredito</span>(
+            <span class="str">"Ana López"</span>, <span class="str">34</span>, bd(<span class="str">"25000"</span>), bd(<span class="str">"120000"</span>), <span class="str">36</span>, <span class="kw">false</span>);
+
+        <span class="kw">var</span> model = aprobacionCredito.createModel();
+        model.fromMap(<span class="typ">Map</span>.of(<span class="str">"solicitud"</span>, solicitud));
+
+        <span class="kw">var</span> instancia = aprobacionCredito.createInstance(model);
+        instancia.start();
+
+        <span class="cmt">// Sin tarea humana → el proceso termina solo</span>
+        assertEquals(<span class="typ">ProcessInstance</span>.STATE_COMPLETED, instancia.status());
+        <span class="kw">var</span> evaluacion = (<span class="typ">Evaluacion</span>) instancia.variables().toMap().get(<span class="str">"evaluacion"</span>);
+        assertEquals(<span class="str">"APROBADO"</span>, evaluacion.getDecision());
+    }
+
+    <span class="anot">@Test</span>
+    <span class="kw">void</span> <span class="typ">montoFronteraQuedaEnRevisionConTareaActiva</span>() {
+        <span class="kw">var</span> solicitud = <span class="kw">new</span> <span class="typ">SolicitudCredito</span>(
+            <span class="str">"Ana López"</span>, <span class="str">34</span>, bd(<span class="str">"25000"</span>), bd(<span class="str">"220000"</span>), <span class="str">36</span>, <span class="kw">false</span>);
+        <span class="kw">var</span> model = aprobacionCredito.createModel();
+        model.fromMap(<span class="typ">Map</span>.of(<span class="str">"solicitud"</span>, solicitud));
+
+        <span class="kw">var</span> instancia = aprobacionCredito.createInstance(model);
+        instancia.start();
+
+        <span class="cmt">// Hay una tarea humana pendiente → el proceso sigue activo</span>
+        assertEquals(<span class="typ">ProcessInstance</span>.STATE_ACTIVE, instancia.status());
+        assertFalse(instancia.workItems().isEmpty());
+    }
+}</code></pre>
+      </div>
+
+      <div class="codigo">
+        <div class="barra-cod"><span class="sem r"></span><span class="sem a"></span><span class="sem v"></span><span class="arch">test/DesembolsoServiceTest.java — JUnit + Mockito</span></div>
+        <pre><code><span class="anot">@ExtendWith</span>(<span class="typ">MockitoExtension</span>.<span class="kw">class</span>)
+<span class="kw">class</span> <span class="typ">DesembolsoServiceTest</span> {
+
+    <span class="anot">@Mock</span>  <span class="typ">CuentaRepository</span> cuentas;     <span class="cmt">// el repositorio JPA, simulado</span>
+    <span class="anot">@InjectMocks</span> <span class="typ">DesembolsoService</span> servicio;
+
+    <span class="anot">@Test</span>
+    <span class="kw">void</span> <span class="typ">registraElDesembolso</span>() {
+        when(cuentas.save(any())).thenAnswer(inv -&gt; inv.getArgument(<span class="str">0</span>));
+
+        servicio.desembolsar(<span class="str">"Ana López"</span>, bd(<span class="str">"120000"</span>));
+
+        verify(cuentas).save(argThat(c -&gt; c.getMonto().equals(bd(<span class="str">"120000"</span>))));
+    }
+}</code></pre>
+      </div>
+
+      <div class="puente">
+        <p>¿Ves la continuidad? <code class="en-linea">@SpringBootTest</code>, <code class="en-linea">@Mock</code>, <code class="en-linea">@InjectMocks</code>, <code class="en-linea">verify</code>, <code class="en-linea">argThat</code>… son exactamente las herramientas que ya dominas. El proceso es un <strong>bean más</strong> que se autoconfigura; el repositorio JPA se <em>mockea</em> igual que en cualquier servicio. Probar un proceso de negocio no es una disciplina nueva: es tu testing de Spring aplicado a un orquestador.</p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <h2>Trazabilidad: del temario al capstone</h2>
+      <p>Este proyecto no inventa nada; recoge todo lo que viste. Usa esta tabla como repaso de cierre: cada tema del curso aterriza en un lugar concreto del código.</p>
+
+      <table class="tabla">
+        <thead>
+          <tr><th>Tema del temario</th><th>Dónde aparece en el proyecto</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>REST y endpoint autogenerado</strong></td>
+            <td><code>POST /aprobacionCredito</code> nace del <code>processId</code>; los endpoints de tarea (<code>/tasks</code>, <code>/RevisionAnalista/{taskId}</code>) también. Cero <code>@RestController</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Códigos de respuesta HTTP</strong></td>
+            <td><code>201 Created</code> al arrancar la instancia; <code>200 OK</code> al consultar o completar tarea; <code>404</code> si el <code>id</code> no existe; <code>400</code> si el cuerpo está mal formado.</td>
+          </tr>
+          <tr>
+            <td><strong>DMN (decisiones)</strong></td>
+            <td><code>scoringCredito.dmn</code>, decisión modelada en DMN (contexto FEEL), probada en <code>ScoringDmnTest</code> y expuesta como <code>POST /scoringCredito</code>. En el proceso, la misma lógica se calcula en la Script Task «Evaluar score».</td>
+          </tr>
+          <tr>
+            <td><strong>Gateways y decisiones</strong></td>
+            <td>Gateway exclusivo sobre <code>evaluacion.decision</code> con tres ramas y rama por defecto.</td>
+          </tr>
+          <tr>
+            <td><strong>Tareas humanas</strong></td>
+            <td>User Task «Revisión del analista», asignada al grupo <code>analistas</code>; ciclo claim → complete por REST.</td>
+          </tr>
+          <tr>
+            <td><strong>Variables y datos</strong></td>
+            <td><code>solicitud</code> (tag <code>input</code>) y <code>evaluacion</code> (tag <code>output</code>), mapeadas a los POJOs del paquete <code>model</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>JUnit / Mockito</strong></td>
+            <td><code>AprobacionCreditoProcessTest</code> (flujo completo), <code>ScoringCreditoDecisionTest</code> (DMN aislado) y <code>DesembolsoServiceTest</code> (<code>@Mock</code> + <code>verify</code>).</td>
+          </tr>
+          <tr>
+            <td><strong>JPA / persistencia</strong></td>
+            <td>POJOs serializables como variables del proceso; <code>CuentaRepository</code> (JPA) en el servicio de apoyo; persistencia JDBC del estado se activa por configuración (ver siguientes pasos).</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="seccion">
+      <h2>Lo que lograste y hacia dónde seguir</h2>
+
+      <div class="aviso tip">
+        <div class="titulo">✅ Checklist de lo aprendido</div>
+        <p>Si completaste el capstone, ya sabes:</p>
+        <ul>
+          <li>Modelar un proceso de negocio real en BPMN y dejar que Kogito <strong>genere su endpoint REST</strong> sin escribir controladores.</li>
+          <li>Externalizar la lógica de negocio en una <strong>decisión DMN</strong> e invocarla desde una <strong>Business Rule Task</strong>.</li>
+          <li>Enrutar el flujo con un <strong>gateway exclusivo</strong> a partir de una variable, con su rama por defecto.</li>
+          <li>Incorporar una <strong>tarea humana</strong> asignada a un grupo y resolverla por REST (claim → complete).</li>
+          <li>Manejar <strong>variables del proceso</strong> como POJOs de entrada y salida.</li>
+          <li>Probar todo con <strong>JUnit y Mockito</strong>, tal como ya lo hacías en Spring.</li>
+        </ul>
+      </div>
+
+      <h3>Siguientes pasos para llevarlo a producción</h3>
+      <p>El proyecto corre con estado en memoria, perfecto para aprender. Para producción, estos son los tres saltos naturales, cada uno casi sin tocar tu modelo:</p>
+
+      <ol class="pasos">
+        <li><strong>Persistencia en PostgreSQL.</strong> Agrega el addon <code class="en-linea">jbpm-addons-springboot-persistence-jdbc</code> y configura el <em>datasource</em> en <code class="en-linea">application.properties</code> (<code class="en-linea">spring.datasource.url=jdbc:postgresql://...</code>). El estado de cada instancia y cada tarea sobrevive a un reinicio. Es el mismo PostgreSQL al que ya conectas tu JPA.</li>
+        <li><strong>Eventos con Kafka.</strong> Con el addon <code class="en-linea">kie-addons-springboot-events-process-kafka</code>, Kogito publica eventos <em>CloudEvents</em> (instancia iniciada, tarea creada, proceso completado) que otros servicios pueden consumir. Útil para auditoría, notificaciones o disparar otros procesos.</li>
+        <li><strong>Desplegar en contenedor.</strong> Empaqueta con <code class="en-linea">mvn package</code>, construye una imagen y despliégala en Kubernetes/OpenShift. Como es un microservicio por proceso, escalas <em>esta</em> capacidad de crédito de forma independiente del resto del banco.</li>
+      </ol>
+
+      <div class="aviso"><div class="titulo">ℹ️ Nota</div><p>Observa la promesa cumplida de Kogito: pasar de «en memoria» a «PostgreSQL + Kafka + contenedor» se hace <strong>añadiendo dependencias y configuración</strong>, no reescribiendo el proceso. El diagrama, las reglas y tus POJOs no cambian. Esa es la separación entre <em>qué hace</em> tu negocio y <em>cómo</em> se opera en infraestructura.</p></div>
+
+      <div class="puente">
+        <p>Cierre del curso: empezaste preguntándote qué tenía de distinto un proceso de negocio frente a un servicio de Spring. La respuesta, después de este capstone, es clara: <strong>el flujo, las decisiones y la coordinación humana dejan de ser código disperso y pasan a ser artefactos declarativos</strong> —BPMN y DMN— que Kogito ejecuta y expone por REST. Tú sigues escribiendo Java, POJOs y pruebas como siempre; solo que ahora la orquestación es explícita, visible y mantenible. Enhorabuena: ya construyes procesos de negocio cloud-native.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Navegación de la serie -->
+  <nav class="nav-serie envoltura">
+    <a href="11-testing-proceso.html"><div class="dir">← Anterior</div><div class="tit">Probar el proceso</div></a>
+    <a href="../index.html" class="sig"><div class="dir">Siguiente →</div><div class="tit">Volver al índice</div></a>
+  </nav>
+
+  <footer class="pie-pagina">
+    <span>Procesos de Negocio con Kogito · academyMundial2026</span>
+    <span>Apache KIE · Kogito 10.2.0 · Spring Boot · Java 21</span>
+  </footer>
+
+</body>
+</html>
