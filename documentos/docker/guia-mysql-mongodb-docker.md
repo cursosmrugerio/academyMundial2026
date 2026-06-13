@@ -15,7 +15,7 @@ docker pull mysql:8
 ### 2. Crear y ejecutar el contenedor
 
 ```powershell
-docker run --name mysql-academia -e MYSQL_ROOT_PASSWORD=root123 -p 3306:3306 -d mysql:8
+docker run --name mysql-academia-PROD -e MYSQL_ROOT_PASSWORD=root123 -p 3308:3306 -d mysql:8
 ```
 
 | Parametro | Que hace |
@@ -40,6 +40,14 @@ docker exec -it mysql-academia mysql -u root -p
 ```
 
 Ingresa la contraseña `root123` y estaras dentro del cliente MySQL.
+
+### 4B. Crear usuario en Mysql
+
+CREATE USER IF NOT EXISTS 'academia'@'%' IDENTIFIED BY 'xideral123';
+
+GRANT ALL PRIVILEGES ON *.* TO 'academia'@'%' WITH GRANT OPTION;
+
+FLUSH PRIVILEGES;
 
 ### 5. Crear una base de datos de prueba
 
