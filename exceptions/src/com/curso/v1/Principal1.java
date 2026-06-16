@@ -11,7 +11,7 @@ public class Principal1 {
 	public static void main(String[] args) {
 		
 		int x = 8;
-		int y = 0;
+		int y = 2;
 		
 		int resultado = 0;
 		
@@ -23,7 +23,7 @@ public class Principal1 {
 		
 		System.out.println("Resultado: "+resultado);
 		
-		System.out.println("End Program***");
+		System.out.println("End Program");
 	}
 
 	private static int dividir(int x,int y) throws DividirException {
